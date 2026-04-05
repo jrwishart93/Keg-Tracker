@@ -55,16 +55,34 @@ export function AllocateKegForm() {
       setError("");
       setSuccessMessage("");
 
+      // Non-critical: seeds products + locations. Staff users get permission-denied on
+      // the locations write — expected and safe to swallow.
       try {
         await seedCoreData();
+      } catch {
+        // Intentionally swallowed.
+      }
+
+      try {
+        // Critical: ensure name pool exists before reading it.
         await seedDefaultKegNames();
 
-        const [loadedNames, loadedLocations, loadedProducts, summary] = await Promise.all([
+        // Critical reads — failures here are genuine blockers.
+        const [loadedNames, summary] = await Promise.all([
           getAvailableKegNames(),
-          getLocations(),
-          getProducts(),
           getKegNameSummary(),
         ]);
+
+        // Non-critical reads — degrade gracefully on failure.
+        const [locationsResult, productsResult] = await Promise.allSettled([
+          getLocations(),
+          getProducts(),
+        ]);
+
+        const loadedLocations =
+          locationsResult.status === "fulfilled" ? locationsResult.value : [];
+        const loadedProducts =
+          productsResult.status === "fulfilled" ? productsResult.value : [];
 
         setAvailableNames(loadedNames);
         setNameSummary(summary);
