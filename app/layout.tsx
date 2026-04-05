@@ -18,8 +18,8 @@ const bodyFont = Manrope({
 });
 
 export const metadata: Metadata = {
-  title: "Keg Tracker",
-  description: "Track keg locations and movements",
+  title: "Keg Tracker | b.effect Brewing",
+  description: "A simple QR-based keg tracking system for b.effect Brewing.",
 };
 
 export default function RootLayout({

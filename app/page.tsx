@@ -3,7 +3,7 @@
 import Image from "next/image";
 
 export default function WelcomePage() {
-  function onCreateAccount() {
+  function onGetStarted() {
     window.location.href = "/login?mode=signup";
   }
 
@@ -32,37 +32,38 @@ export default function WelcomePage() {
             <div>
               <p className="eyebrow text-amber-100/80">Brewery Ops System</p>
               <p className="mt-2 text-sm font-medium uppercase tracking-[0.18em] text-slate-200/75">b.effect Brewing</p>
+              <p className="mt-2 text-sm leading-6 text-slate-100/82">A simple QR-based keg tracking system for b.effect Brewing.</p>
             </div>
           </div>
 
-          <h1 className="display-title mt-7 text-5xl text-balance sm:text-7xl">Track every pour, pickup, and return without slowing the shift.</h1>
+          <h1 className="display-title mt-7 text-5xl text-balance sm:text-7xl">Track every keg from fill to return without slowing the shift.</h1>
           <p className="mt-5 max-w-2xl text-base leading-7 text-slate-100/88 sm:text-lg">
-            Keg Tracker gives brewery teams a faster way to allocate keg identities, scan movement in seconds, and keep head office aligned with one
-            live operational record.
+            Give each keg an ID, stick on a QR code, and scan it through every stage of the journey, from filling to delivery to return. Your whole
+            team stays on the same page in real time.
           </p>
 
           <div className="mt-8 grid gap-3 sm:grid-cols-3">
             <div className="rounded-[22px] border border-white/10 bg-[rgba(255,255,255,0.08)] p-4">
               <p className="eyebrow text-[10px] text-amber-100/78">Field Ready</p>
-              <p className="mt-2 text-sm leading-6 text-slate-100/86">Phone-first scanning with minimal typing on busy cellar and delivery shifts.</p>
+              <p className="mt-2 text-sm leading-6 text-slate-100/86">Works on any phone. Scan a keg in seconds with no laptop, no paperwork, and no fuss.</p>
             </div>
             <div className="rounded-[22px] border border-white/10 bg-[rgba(255,255,255,0.08)] p-4">
               <p className="eyebrow text-[10px] text-amber-100/78">Live Ops</p>
-              <p className="mt-2 text-sm leading-6 text-slate-100/86">Current location, intended destination, and full movement history in one place.</p>
+              <p className="mt-2 text-sm leading-6 text-slate-100/86">See where every keg is right now, where it came from, where it is going, and its full history.</p>
             </div>
             <div className="rounded-[22px] border border-white/10 bg-[rgba(255,255,255,0.08)] p-4">
               <p className="eyebrow text-[10px] text-amber-100/78">Sticker Workflow</p>
-              <p className="mt-2 text-sm leading-6 text-slate-100/86">Generate a keg identity, save the QR payload, and print the label immediately.</p>
+              <p className="mt-2 text-sm leading-6 text-slate-100/86">Create a keg ID, generate its QR code, and print the label all in one step.</p>
             </div>
           </div>
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
             <button
               type="button"
-              onClick={onCreateAccount}
+              onClick={onGetStarted}
               className="glow-button min-h-13 rounded-full bg-[linear-gradient(135deg,#e6b677,#be7c38)] px-6 font-semibold text-white"
             >
-              Create Account
+              Get Started
             </button>
             <button
               type="button"
