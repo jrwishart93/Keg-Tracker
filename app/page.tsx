@@ -9,17 +9,11 @@ export default function WelcomePage() {
 
   return (
     <main className="page-shell relative -mx-4 -mt-6 min-h-[calc(100vh-5rem)] overflow-hidden md:-mx-5 md:rounded-[32px]">
-      <Image
-        src="https://beffect.nz/cdn/shop/files/220612-Wanaka-Snow-023.jpg?v=1746667988&width=535"
-        alt="Wānaka landscape"
-        fill
-        priority
-        className="object-cover"
-      />
-      <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(16,24,33,0.9),rgba(17,26,34,0.62),rgba(73,94,68,0.46))]" />
+      <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(16,24,33,0.96),rgba(17,26,34,0.86),rgba(73,94,68,0.52))]" />
       <div className="grain-overlay absolute inset-0" />
+      <div className="absolute inset-x-0 top-0 h-64 bg-[radial-gradient(circle_at_top_right,rgba(230,182,119,0.24),transparent_55%)]" />
 
-      <section className="relative mx-auto flex min-h-[calc(100vh-5rem)] max-w-5xl flex-col justify-center px-5 py-12 text-white">
+      <section className="relative mx-auto grid min-h-[calc(100vh-5rem)] max-w-6xl gap-8 px-5 py-12 text-white lg:grid-cols-[1.02fr_0.98fr] lg:items-center">
         <div className="float-in editorial-panel editorial-panel--dark grain-overlay max-w-3xl p-7 sm:p-10">
           <div className="flex items-center gap-4">
             <Image
@@ -83,6 +77,30 @@ export default function WelcomePage() {
             >
               How It Works
             </button>
+          </div>
+        </div>
+
+        <div className="float-in lg:justify-self-end">
+          <div className="editorial-panel overflow-hidden border border-white/12 bg-[rgba(255,255,255,0.06)] p-3 shadow-[0_28px_60px_rgba(0,0,0,0.26)]">
+            <div className="relative aspect-[4/5] overflow-hidden rounded-[24px]">
+              <Image
+                src="/B7162A6B-6140-4967-9497-6A7BB44B9319.PNG"
+                alt="b.effect staff member scanning a keg QR code beside a labelled keg"
+                fill
+                priority
+                className="object-cover"
+              />
+              <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(10,15,22,0.08),rgba(10,15,22,0.42))]" />
+              <div className="absolute bottom-0 left-0 right-0 p-5">
+                <div className="rounded-[20px] border border-white/14 bg-[rgba(14,21,29,0.72)] p-4 backdrop-blur-md">
+                  <p className="eyebrow text-amber-100/78">Live Workflow</p>
+                  <p className="mt-2 text-lg font-semibold text-white">Scan the keg, confirm the status, and keep the label on the unit.</p>
+                  <p className="mt-2 text-sm leading-6 text-slate-200/84">
+                    The home screen now shows the real workflow: a keg sticker on the barrel, the QR on the phone, and the scan process in action.
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
