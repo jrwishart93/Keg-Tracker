@@ -840,7 +840,11 @@ export async function createKeg(payload: CreateKegInput) {
       throw new Error("That keg name has already been assigned.");
     }
 
-    transaction.set(kegRef, keg);
+    // transaction.set() throws on undefined values; strip them before writing.
+    const kegData = Object.fromEntries(
+      Object.entries(keg).filter(([, v]) => v !== undefined),
+    );
+    transaction.set(kegRef, kegData);
     transaction.update(kegNameRef, {
       assigned: true,
       assignedKegId: id,

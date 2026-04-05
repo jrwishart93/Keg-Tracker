@@ -46,19 +46,17 @@ export function QRCodePreview({
   }, [size, value]);
 
   return (
-    <div className={className}>
-      <div className="relative" style={{ width: size, height: size }}>
+    <div className={className} style={{ maxWidth: size, width: "100%" }}>
+      <div className="relative w-full" style={{ aspectRatio: "1 / 1" }}>
         <canvas
           ref={canvasRef}
           role="img"
           aria-label={`QR code for ${value}`}
-          className="block h-full w-full"
+          className="absolute inset-0 block h-full w-full"
           style={{ visibility: status === "ready" ? "visible" : "hidden" }}
         />
         {status !== "ready" ? (
-          <div
-            className="absolute inset-0 flex items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50 text-center text-sm text-slate-500"
-          >
+          <div className="absolute inset-0 flex items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50 text-center text-sm text-slate-500">
             {status === "error" ? "QR unavailable" : "Generating QR…"}
           </div>
         ) : null}

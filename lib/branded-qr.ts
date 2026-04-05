@@ -17,12 +17,16 @@ function loadLogo(src: string) {
 
 export async function generateBrandedQr(canvas: HTMLCanvasElement, value: string, size = 300) {
   const pixelRatio = window.devicePixelRatio || 1;
-  const renderSize = Math.round(size * pixelRatio);
+  // Use the container's actual CSS width so the canvas never exceeds it on mobile.
+  const cssSize = canvas.parentElement
+    ? Math.min(size, canvas.parentElement.clientWidth || size)
+    : size;
+  const renderSize = Math.round(cssSize * pixelRatio);
 
   canvas.width = renderSize;
   canvas.height = renderSize;
-  canvas.style.width = `${size}px`;
-  canvas.style.height = `${size}px`;
+  canvas.style.width = `${cssSize}px`;
+  canvas.style.height = `${cssSize}px`;
 
   await QRCode.toCanvas(canvas, value, {
     errorCorrectionLevel: "H",
