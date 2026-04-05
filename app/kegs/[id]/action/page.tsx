@@ -32,6 +32,11 @@ export default function KegActionPage({ params }: { params: Promise<{ id: string
 
       try {
         await seedCoreData();
+      } catch {
+        // Intentionally swallowed — staff users lack write access to locations/products.
+      }
+
+      try {
         const [locations, loadedProducts, loadedKeg] = await Promise.all([getLocations(), getProducts(), getKegById(id)]);
 
         if (cancelled) {

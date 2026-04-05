@@ -35,6 +35,11 @@ export function LocationsClient() {
 
       try {
         await seedCoreData();
+      } catch {
+        // Intentionally swallowed — staff users lack write access to locations/products.
+      }
+
+      try {
         const loadedLocations = await getLocations();
         if (!cancelled) {
           setLocations(loadedLocations);

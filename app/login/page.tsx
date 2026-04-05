@@ -4,6 +4,7 @@ import Image from "next/image";
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { loginWithEmail, signInWithApple, signInWithGoogle, signUpWithEmail } from "@/lib/auth";
+import { useAuth } from "@/context/auth-context";
 
 type AuthMode = "signin" | "signup";
 
@@ -47,6 +48,14 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
   const router = useRouter();
+  const { state: { user, loading: authLoading } } = useAuth();
+
+  // Redirect already-authenticated users away from the login page.
+  useEffect(() => {
+    if (!authLoading && user) {
+      router.replace("/dashboard");
+    }
+  }, [user, authLoading, router]);
 
   useEffect(() => {
     const requestedMode = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("mode") : null;

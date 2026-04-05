@@ -33,9 +33,17 @@ export function KegLifecyclePanel({ keg }: { keg: Keg }) {
 
   useEffect(() => {
     async function loadProducts() {
-      await seedCoreData();
-      const loadedProducts = await getProducts();
-      setProducts(loadedProducts);
+      try {
+        await seedCoreData();
+      } catch {
+        // Intentionally swallowed — staff users lack write access to locations/products.
+      }
+      try {
+        const loadedProducts = await getProducts();
+        setProducts(loadedProducts);
+      } catch {
+        // Products unavailable — dropdown will be empty.
+      }
     }
 
     void loadProducts();

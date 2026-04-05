@@ -45,6 +45,11 @@ export function DashboardClient({
 
       try {
         await seedCoreData();
+      } catch {
+        // Intentionally swallowed — staff users lack write access to locations/products.
+      }
+
+      try {
         const loadedKegs = await getKegs();
         if (!cancelled) {
           setKegs(loadedKegs);
