@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { QRCodePreview } from "@/components/QRCodePreview";
 import { buildQrCodeValue, isValidQrCodeValue } from "@/lib/keg-names";
-import { createKeg, getAvailableKegNames, getKegNameSummary, getLocations, getProducts, seedCoreData, seedDefaultKegNames } from "@/lib/firestore";
+import { createKeg, getKegNames, getLocations, getProducts, seedDefaultKegNames } from "@/lib/firestore";
 import { useAuth } from "@/context/auth-context";
 import type { Keg } from "@/types/keg";
 import type { KegNameEntry } from "@/types/keg-name";
@@ -66,41 +66,33 @@ export function AllocateKegForm() {
       setError("");
       setSuccessMessage("");
 
-      // Non-critical: seeds products + locations. Staff users get permission-denied on
-      // the locations write — expected and safe to swallow.
       try {
-        await seedCoreData();
-      } catch {
-        // Intentionally swallowed.
-      }
-
-      try {
-        // Critical: ensure name pool exists before reading it.
-        await seedDefaultKegNames();
-
-        // Critical reads — failures here are genuine blockers.
-        const [loadedNames, summary] = await Promise.all([
-          getAvailableKegNames(),
-          getKegNameSummary(),
+        // Single read of kegNames + locations + products all in parallel.
+        // kegNames is critical; locations and products degrade gracefully.
+        const [locationsResult, productsResult, allNames] = await Promise.all([
+          getLocations().catch(() => [] as Awaited<ReturnType<typeof getLocations>>),
+          getProducts().catch(() => [] as Awaited<ReturnType<typeof getProducts>>),
+          getKegNames(),
         ]);
 
-        // Non-critical reads — degrade gracefully on failure.
-        const [locationsResult, productsResult] = await Promise.allSettled([
-          getLocations(),
-          getProducts(),
-        ]);
+        // Seed the name pool only if it is genuinely empty (first deployment).
+        const names = allNames.length === 0
+          ? await seedDefaultKegNames().then(() => getKegNames()).catch(() => [] as Awaited<ReturnType<typeof getKegNames>>)
+          : allNames;
 
-        const loadedLocations =
-          locationsResult.status === "fulfilled" ? locationsResult.value : [];
-        const loadedProducts =
-          productsResult.status === "fulfilled" ? productsResult.value : [];
+        // Derive available list and summary from the single read.
+        const loadedNames = names
+          .filter((entry) => !entry.assigned)
+          .sort((a, b) => a.name.localeCompare(b.name));
+        const assigned = names.filter((entry) => entry.assigned).length;
+        const summary = { total: names.length, assigned, available: names.length - assigned };
 
         setAvailableNames(loadedNames);
         setNameSummary(summary);
-        setProducts(loadedProducts);
+        setProducts(productsResult);
 
-        if (loadedLocations.length > 0) {
-          setLocations(Array.from(new Set(loadedLocations.map((location) => location.name))));
+        if (locationsResult.length > 0) {
+          setLocations(Array.from(new Set(locationsResult.map((location) => location.name))));
         }
 
         setForm((current) => ({
@@ -158,7 +150,12 @@ export function AllocateKegForm() {
   }
 
   async function refreshReferenceData() {
-    const [loadedNames, summary] = await Promise.all([getAvailableKegNames(), getKegNameSummary()]);
+    const allNames = await getKegNames();
+    const loadedNames = allNames
+      .filter((entry) => !entry.assigned)
+      .sort((a, b) => a.name.localeCompare(b.name));
+    const assigned = allNames.filter((entry) => entry.assigned).length;
+    const summary = { total: allNames.length, assigned, available: allNames.length - assigned };
     setAvailableNames(loadedNames);
     setNameSummary(summary);
     setSearchTerm("");
