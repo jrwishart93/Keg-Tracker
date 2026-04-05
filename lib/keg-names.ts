@@ -216,6 +216,10 @@ export function buildQrCodeValue(name: string) {
   return `keg-tracker:${slugifyKegName(name)}`;
 }
 
+export function isValidQrCodeValue(value: string) {
+  return value.startsWith("keg-tracker:") && value.length > "keg-tracker:".length;
+}
+
 export function normalizeKegNameInput(name: string) {
   return name.trim().replace(/\s+/g, " ");
 }

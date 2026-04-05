@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { QRCodePreview } from "@/components/QRCodePreview";
-import { buildQrCodeValue } from "@/lib/keg-names";
+import { buildQrCodeValue, isValidQrCodeValue } from "@/lib/keg-names";
 import { createKeg, getAvailableKegNames, getKegNameSummary, getLocations, getProducts, seedCoreData, seedDefaultKegNames } from "@/lib/firestore";
 import type { Keg } from "@/types/keg";
 import type { KegNameEntry } from "@/types/keg-name";
@@ -24,6 +24,7 @@ export function AllocateKegForm() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [availableNames, setAvailableNames] = useState<KegNameEntry[]>([]);
   const [locations, setLocations] = useState<string[]>(["Brewery", "b.social / Tap Room"]);
@@ -52,6 +53,7 @@ export function AllocateKegForm() {
     async function loadReferenceData() {
       setLoading(true);
       setError("");
+      setSuccessMessage("");
 
       try {
         await seedCoreData();
@@ -99,6 +101,7 @@ export function AllocateKegForm() {
 
   const qrValue = buildQrCodeValue(form.kegId || "new-keg");
   const noNamesAvailable = availableNames.length === 0;
+  const qrReady = isValidQrCodeValue(qrValue);
 
   function updateField(key: keyof typeof form, value: string) {
     if (key === "product") {
@@ -148,6 +151,7 @@ export function AllocateKegForm() {
     event.preventDefault();
     setSaving(true);
     setError("");
+    setSuccessMessage("");
 
     try {
       const created = await createKeg({
@@ -164,6 +168,7 @@ export function AllocateKegForm() {
 
       setCreatedKeg(created);
       await refreshReferenceData();
+      setSuccessMessage(`Allocated ${created.kegId} and saved its QR payload to Firebase.`);
       setForm((current) => ({
         ...current,
         product: "",
@@ -183,36 +188,37 @@ export function AllocateKegForm() {
   }
 
   if (loading) {
-    return <div className="rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-500 shadow-sm">Loading keg setup…</div>;
+    return <div className="editorial-panel p-6 text-sm text-slate-500">Loading keg setup…</div>;
   }
 
   return (
     <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
-      <form className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm" onSubmit={handleSubmit}>
+      <form className="editorial-panel space-y-4 p-5 sm:p-6" onSubmit={handleSubmit}>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 className="text-xl font-semibold text-[#131E29]">Allocate a New Keg</h2>
-            <p className="mt-1 text-sm text-slate-600">
+            <p className="section-kicker">New Identity</p>
+            <h2 className="mt-2 text-3xl font-semibold text-[color:var(--ink)]">Allocate a New Keg</h2>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
               Pick an unused keg identity from the shared name pool, add any setup details you know now, then generate the QR sticker.
             </p>
           </div>
-          <Link href="/settings/keg-names" className="inline-flex min-h-11 items-center rounded-lg border border-slate-300 px-4 text-sm font-semibold text-slate-700">
+          <Link href="/settings/keg-names" className="inline-flex min-h-11 items-center rounded-full border border-black/10 bg-[rgba(255,255,255,0.55)] px-4 text-sm font-semibold text-slate-700">
             Manage Names
           </Link>
         </div>
 
-        <section className="grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 sm:grid-cols-3">
+        <section className="grid gap-3 rounded-[22px] bg-[rgba(255,255,255,0.55)] p-4 sm:grid-cols-3">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Total names</p>
-            <p className="mt-1 text-2xl font-bold text-[#131E29]">{nameSummary.total}</p>
+            <p className="section-kicker">Total names</p>
+            <p className="mt-2 text-3xl font-semibold text-[color:var(--ink)]">{nameSummary.total}</p>
           </div>
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Assigned</p>
-            <p className="mt-1 text-2xl font-bold text-[#131E29]">{nameSummary.assigned}</p>
+            <p className="section-kicker">Assigned</p>
+            <p className="mt-2 text-3xl font-semibold text-[color:var(--ink)]">{nameSummary.assigned}</p>
           </div>
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Available</p>
-            <p className="mt-1 text-2xl font-bold text-[#131E29]">{nameSummary.available}</p>
+            <p className="section-kicker">Available</p>
+            <p className="mt-2 text-3xl font-semibold text-[color:var(--ink)]">{nameSummary.available}</p>
           </div>
         </section>
 
@@ -223,9 +229,9 @@ export function AllocateKegForm() {
         ) : (
           <>
             <label className="block">
-              <span className="block text-xs font-semibold tracking-[0.12em] text-slate-500">SEARCH NAME LIST</span>
+              <span className="section-kicker">Search Name List</span>
               <input
-                className="mt-1 min-h-12 w-full rounded-lg border border-slate-300 bg-slate-50 px-3 text-slate-900"
+                className="field-shell mt-2 min-h-12 w-full rounded-[18px] px-4 text-slate-900"
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
                 placeholder="Search available keg names"
@@ -233,10 +239,10 @@ export function AllocateKegForm() {
             </label>
 
             <label className="block">
-              <span className="block text-xs font-semibold tracking-[0.12em] text-slate-500">KEG NAME / IDENTITY</span>
-              <div className="mt-1 flex gap-2">
+              <span className="section-kicker">Keg Name / Identity</span>
+              <div className="mt-2 flex gap-2">
                 <select
-                  className="min-h-12 flex-1 rounded-lg border border-slate-300 bg-slate-50 px-3 text-slate-900"
+                  className="field-shell min-h-12 flex-1 rounded-[18px] px-4 text-slate-900"
                   value={form.kegId}
                   onChange={(event) => updateField("kegId", event.target.value)}
                   required
@@ -250,7 +256,7 @@ export function AllocateKegForm() {
                 <button
                   type="button"
                   onClick={selectRandomName}
-                  className="min-h-12 rounded-lg border border-slate-300 px-4 text-sm font-semibold text-slate-700"
+                  className="min-h-12 rounded-full border border-black/10 bg-[rgba(255,255,255,0.6)] px-4 text-sm font-semibold text-slate-700"
                   disabled={availableNames.length < 2}
                 >
                   Regenerate
@@ -262,9 +268,9 @@ export function AllocateKegForm() {
         )}
 
         <label className="block">
-          <span className="block text-xs font-semibold tracking-[0.12em] text-slate-500">WHAT&apos;S IN THE KEG?</span>
+          <span className="section-kicker">What&apos;s In The Keg?</span>
           <select
-            className="mt-1 min-h-12 w-full rounded-lg border border-slate-300 bg-slate-50 px-3 text-slate-900"
+            className="field-shell mt-2 min-h-12 w-full rounded-[18px] px-4 text-slate-900"
             value={form.product}
             onChange={(event) => updateField("product", event.target.value)}
           >
@@ -278,10 +284,10 @@ export function AllocateKegForm() {
         </label>
 
         <label className="block">
-          <span className="block text-xs font-semibold tracking-[0.12em] text-slate-500">CURRENT LOCATION</span>
+          <span className="section-kicker">Current Location</span>
           <input
             list="allocation-locations"
-            className="mt-1 min-h-12 w-full rounded-lg border border-slate-300 bg-slate-50 px-3 text-slate-900"
+            className="field-shell mt-2 min-h-12 w-full rounded-[18px] px-4 text-slate-900"
             value={form.currentLocation}
             onChange={(event) => updateField("currentLocation", event.target.value)}
             placeholder="Brewery"
@@ -289,10 +295,10 @@ export function AllocateKegForm() {
         </label>
 
         <label className="block">
-          <span className="block text-xs font-semibold tracking-[0.12em] text-slate-500">INTENDED LOCATION</span>
+          <span className="section-kicker">Intended Location</span>
           <input
             list="allocation-locations"
-            className="mt-1 min-h-12 w-full rounded-lg border border-slate-300 bg-slate-50 px-3 text-slate-900"
+            className="field-shell mt-2 min-h-12 w-full rounded-[18px] px-4 text-slate-900"
             value={form.intendedLocation}
             onChange={(event) => updateField("intendedLocation", event.target.value)}
             placeholder="Tap room, storage, supplier, bar, another brewery…"
@@ -301,18 +307,18 @@ export function AllocateKegForm() {
 
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="block">
-            <span className="block text-xs font-semibold tracking-[0.12em] text-slate-500">BEER NAME</span>
+            <span className="section-kicker">Beer Name</span>
             <input
-              className="mt-1 min-h-12 w-full rounded-lg border border-slate-300 bg-slate-50 px-3 text-slate-900"
+              className="field-shell mt-2 min-h-12 w-full rounded-[18px] px-4 text-slate-900"
               value={form.beerName}
               onChange={(event) => updateField("beerName", event.target.value)}
               placeholder="Optional"
             />
           </label>
           <label className="block">
-            <span className="block text-xs font-semibold tracking-[0.12em] text-slate-500">BATCH</span>
+            <span className="section-kicker">Batch</span>
             <input
-              className="mt-1 min-h-12 w-full rounded-lg border border-slate-300 bg-slate-50 px-3 text-slate-900"
+              className="field-shell mt-2 min-h-12 w-full rounded-[18px] px-4 text-slate-900"
               value={form.batch}
               onChange={(event) => updateField("batch", event.target.value)}
               placeholder="Optional"
@@ -322,9 +328,9 @@ export function AllocateKegForm() {
 
         <div className="grid gap-4 sm:grid-cols-3">
           <label className="block">
-            <span className="block text-xs font-semibold tracking-[0.12em] text-slate-500">ABV</span>
+            <span className="section-kicker">ABV</span>
             <input
-              className="mt-1 min-h-12 w-full rounded-lg border border-slate-300 bg-slate-50 px-3 text-slate-900"
+              className="field-shell mt-2 min-h-12 w-full rounded-[18px] px-4 text-slate-900"
               value={form.abv}
               onChange={(event) => updateField("abv", event.target.value)}
               placeholder="Optional"
@@ -332,19 +338,19 @@ export function AllocateKegForm() {
             />
           </label>
           <label className="block">
-            <span className="block text-xs font-semibold tracking-[0.12em] text-slate-500">PACKAGING DATE</span>
+            <span className="section-kicker">Packaging Date</span>
             <input
               type="date"
-              className="mt-1 min-h-12 w-full rounded-lg border border-slate-300 bg-slate-50 px-3 text-slate-900"
+              className="field-shell mt-2 min-h-12 w-full rounded-[18px] px-4 text-slate-900"
               value={form.packagingDate}
               onChange={(event) => updateField("packagingDate", event.target.value)}
             />
           </label>
           <label className="block">
-            <span className="block text-xs font-semibold tracking-[0.12em] text-slate-500">BEST BEFORE</span>
+            <span className="section-kicker">Best Before</span>
             <input
               type="date"
-              className="mt-1 min-h-12 w-full rounded-lg border border-slate-300 bg-slate-50 px-3 text-slate-900"
+              className="field-shell mt-2 min-h-12 w-full rounded-[18px] px-4 text-slate-900"
               value={form.bestBeforeDate}
               onChange={(event) => updateField("bestBeforeDate", event.target.value)}
             />
@@ -357,42 +363,49 @@ export function AllocateKegForm() {
           ))}
         </datalist>
 
-        {error ? <p className="text-sm font-medium text-rose-700">{error}</p> : null}
+        {error ? <p className="rounded-[18px] border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">{error}</p> : null}
 
+        {successMessage ? <p className="rounded-[18px] border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">{successMessage}</p> : null}
         <button
           type="submit"
-          disabled={saving || !form.kegId || noNamesAvailable || filteredNames.length === 0}
-          className="min-h-12 w-full rounded-xl bg-[#131E29] px-4 font-semibold text-white disabled:opacity-60"
+          disabled={saving || !form.kegId || noNamesAvailable || filteredNames.length === 0 || !qrReady}
+          className="glow-button min-h-13 w-full rounded-full bg-[linear-gradient(135deg,#17212a,#324452)] px-4 font-semibold text-white disabled:opacity-60"
         >
           {saving ? "Allocating Keg…" : "Generate QR And Add Keg"}
         </button>
       </form>
 
       <aside className="space-y-4">
-        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <p className="text-xs font-semibold tracking-[0.12em] text-slate-500">STICKER PREVIEW</p>
-          <div className="mt-4 flex flex-col items-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 text-center">
-            <QRCodePreview value={qrValue} size={220} className="rounded-xl bg-white p-3" />
-            <p className="mt-4 text-xl font-bold text-[#131E29]">{form.kegId || "No Name Available"}</p>
-            <p className="mt-1 text-xs tracking-[0.12em] text-slate-500">{qrValue}</p>
+        <section className="editorial-panel p-5">
+          <p className="section-kicker">Sticker Preview</p>
+          <div className="mt-4 flex flex-col items-center rounded-[24px] border border-dashed border-black/10 bg-[rgba(255,255,255,0.6)] p-4 text-center">
+            {qrReady ? (
+              <QRCodePreview value={qrValue} size={220} className="rounded-xl bg-white p-3" />
+            ) : (
+              <div className="flex h-[220px] w-[220px] items-center justify-center rounded-xl border border-dashed border-rose-300 bg-rose-50 p-4 text-sm text-rose-700">
+                QR code unavailable for this keg name.
+              </div>
+            )}
+            <p className="mt-4 text-2xl font-semibold text-[color:var(--ink)]">{form.kegId || "No Name Available"}</p>
+            <p className="mt-1 break-all text-xs tracking-[0.12em] text-slate-500">{qrValue}</p>
           </div>
         </section>
 
         {createdKeg ? (
-          <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 shadow-sm print:hidden">
-            <p className="text-xs font-semibold tracking-[0.12em] text-emerald-800">ALLOCATED</p>
-            <p className="mt-2 text-lg font-bold text-[#131E29]">{createdKeg.kegId}</p>
+          <section className="editorial-panel border-emerald-200 bg-[rgba(236,253,245,0.9)] p-5 print:hidden">
+            <p className="section-kicker text-emerald-800">Allocated</p>
+            <p className="mt-2 text-2xl font-semibold text-[color:var(--ink)]">{createdKeg.kegId}</p>
             <p className="mt-1 text-sm text-slate-700">The keg is now active and ready for a printed QR sticker.</p>
             <div className="mt-4 flex flex-col gap-2">
               <Link
                 href={`/kegs/${createdKeg.id}/label`}
-                className="inline-flex min-h-11 items-center justify-center rounded-lg bg-[#131E29] px-4 font-semibold text-white"
+                className="glow-button inline-flex min-h-11 items-center justify-center rounded-full bg-[linear-gradient(135deg,#17212a,#324452)] px-4 font-semibold text-white"
               >
                 Open Sticker
               </Link>
               <Link
                 href={`/kegs/${createdKeg.id}`}
-                className="inline-flex min-h-11 items-center justify-center rounded-lg border border-slate-300 px-4 font-semibold text-slate-700"
+                className="inline-flex min-h-11 items-center justify-center rounded-full border border-black/10 bg-[rgba(255,255,255,0.6)] px-4 font-semibold text-slate-700"
               >
                 View Keg Record
               </Link>

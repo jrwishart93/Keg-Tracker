@@ -69,14 +69,18 @@ export default function KegActionPage({ params }: { params: { id: string } }) {
   }
 
   return (
-    <main className="space-y-4">
-      <h1 className="text-3xl font-bold text-[#131E29]">Scan Keg</h1>
-      <label className="block rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-        <span className="mb-2 block text-xs font-semibold tracking-[0.12em] text-slate-500">SCAN TYPE</span>
+    <main className="page-shell space-y-5">
+      <section className="editorial-panel p-5 sm:p-6">
+        <p className="section-kicker">Scan Action</p>
+        <h1 className="mt-3 text-5xl font-semibold text-[color:var(--ink)]">Update Keg</h1>
+        <p className="mt-3 text-sm leading-7 text-slate-600">Choose the movement type, capture the key details, and save the keg’s next operational state.</p>
+      </section>
+      <label className="editorial-panel block p-5">
+        <span className="section-kicker">Scan Type</span>
         <select
           value={selectedAction}
           onChange={(event) => setSelectedAction(event.target.value as MovementAction)}
-          className="min-h-12 w-full rounded-lg border border-slate-300 bg-slate-50 px-3"
+          className="field-shell mt-2 min-h-12 w-full rounded-[18px] px-4"
         >
           {actions.map((action) => (
             <option key={action} value={action}>
@@ -85,7 +89,7 @@ export default function KegActionPage({ params }: { params: { id: string } }) {
           ))}
         </select>
       </label>
-      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <section className="editorial-panel p-5 sm:p-6">
         <ActionForm
           key={selectedAction}
           actionType={selectedAction}

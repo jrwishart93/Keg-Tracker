@@ -21,7 +21,7 @@ import type { KegNameEntry } from "@/types/keg-name";
 import type { Location } from "@/types/location";
 import type { Movement } from "@/types/movement";
 import type { AppUser } from "@/types/user";
-import { buildQrCodeValue, DEFAULT_KEG_NAMES, dedupeKegNames, normalizeKegNameInput, slugifyKegName, splitKegNameLines } from "@/lib/keg-names";
+import { buildQrCodeValue, DEFAULT_KEG_NAMES, dedupeKegNames, isValidQrCodeValue, normalizeKegNameInput, slugifyKegName, splitKegNameLines } from "@/lib/keg-names";
 
 
 interface UserDocument {
@@ -244,6 +244,33 @@ export async function getUserById(uid: string): Promise<AppUser | null> {
   };
 }
 
+export async function upsertUserProfile(
+  uid: string,
+  payload: {
+    email: string;
+    displayName: string;
+    role?: AppUser["role"];
+    requiresPasswordChange?: boolean;
+    createdAt?: string;
+    lastLoginAt?: string;
+  },
+) {
+  const now = new Date().toISOString();
+
+  await setDoc(
+    doc(db, "users", uid),
+    {
+      email: payload.email,
+      displayName: payload.displayName,
+      role: payload.role ?? "staff",
+      requiresPasswordChange: payload.requiresPasswordChange ?? false,
+      createdAt: payload.createdAt ?? now,
+      lastLoginAt: payload.lastLoginAt ?? now,
+    },
+    { merge: true },
+  );
+}
+
 export async function updateUserLastLogin(uid: string) {
   await updateDoc(doc(db, "users", uid), {
     lastLoginAt: new Date().toISOString(),
@@ -295,10 +322,19 @@ export interface CreateKegInput {
 }
 
 export async function createKeg(payload: CreateKegInput) {
-  const kegId = payload.kegId.trim();
+  const kegId = normalizeKegNameInput(payload.kegId);
+  if (!kegId) {
+    throw new Error("Choose a keg name before creating the keg.");
+  }
+
   const id = slugifyKegName(kegId);
   const kegRef = doc(db, "kegs", id);
   const kegNameRef = doc(db, "kegNames", slugifyKegName(kegId));
+  const qrCode = buildQrCodeValue(kegId);
+
+  if (!isValidQrCodeValue(qrCode)) {
+    throw new Error("Could not generate a valid QR code for this keg.");
+  }
 
   const now = new Date().toISOString();
   const currentLocation = payload.currentLocation?.trim() || "Brewery";
@@ -306,7 +342,7 @@ export async function createKeg(payload: CreateKegInput) {
 
   const keg: Omit<Keg, "id"> = {
     kegId,
-    qrCode: buildQrCodeValue(kegId),
+    qrCode,
     currentStatus: payload.product || payload.beerName ? "filled" : "empty",
     currentLocation,
     intendedLocation,

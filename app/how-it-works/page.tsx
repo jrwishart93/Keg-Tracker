@@ -84,9 +84,10 @@ function SectionCard({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+    <section className="editorial-panel p-5 sm:p-6">
       <div className="mb-4">
-        <h2 className="text-2xl font-bold text-[#131E29]">{title}</h2>
+        <p className="section-kicker">How It Works</p>
+        <h2 className="mt-2 text-3xl font-semibold text-[color:var(--ink)]">{title}</h2>
         {description ? <p className="mt-1 text-sm text-slate-600">{description}</p> : null}
       </div>
       {children}
@@ -96,21 +97,21 @@ function SectionCard({
 
 export default function HowItWorksPage() {
   return (
-    <main className="space-y-6">
-      <section className="overflow-hidden rounded-3xl border border-slate-200 bg-gradient-to-br from-[#131E29] via-[#1C2D3D] to-[#2F4C3A] p-6 text-white shadow-sm">
+    <main className="page-shell space-y-6">
+      <section className="editorial-panel editorial-panel--dark grain-overlay overflow-hidden p-6 text-white shadow-sm">
         <div className="max-w-3xl">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-200">How Keg Tracker Works</p>
-          <h1 className="mt-3 text-4xl font-bold leading-tight sm:text-5xl">Simple keg tracking, built for real use.</h1>
+          <p className="eyebrow text-slate-200">How Keg Tracker Works</p>
+          <h1 className="mt-3 text-5xl font-semibold leading-tight sm:text-6xl">Simple keg tracking, built for real use.</h1>
           <p className="mt-4 max-w-2xl text-sm leading-6 text-slate-100 sm:text-base">
             Keg Tracker makes it easy to record, track, and manage keg movements across your brewery, warehouse, and delivery routes.
             Staff scan and log activity in seconds, while admin and head office get a clear operational view from one central system.
           </p>
           <p className="mt-3 text-sm font-medium text-slate-200">Fast to use on the ground. Clear to manage from the office.</p>
           <div className="mt-6 flex flex-wrap gap-3">
-            <Link href="/" className="inline-flex min-h-12 items-center rounded-xl bg-white px-5 font-semibold text-[#131E29]">
+            <Link href="/" className="glow-button inline-flex min-h-12 items-center rounded-full bg-white px-5 font-semibold text-[#131E29]">
               Back To Welcome
             </Link>
-            <Link href="/login" className="inline-flex min-h-12 items-center rounded-xl border border-white/30 px-5 font-semibold text-white">
+            <Link href="/login" className="inline-flex min-h-12 items-center rounded-full border border-white/30 px-5 font-semibold text-white">
               Staff Login
             </Link>
           </div>
@@ -124,7 +125,7 @@ export default function HowItWorksPage() {
         </p>
         <ul className="mt-4 grid gap-3 sm:grid-cols-2">
           {commonIssues.map((issue) => (
-            <li key={issue} className="rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-700">
+            <li key={issue} className="rounded-[18px] bg-[rgba(255,255,255,0.58)] px-4 py-3 text-sm text-slate-700">
               {issue}
             </li>
           ))}
@@ -134,9 +135,9 @@ export default function HowItWorksPage() {
       <SectionCard title="How It Works" description="The system is built around quick QR scanning and simple updates.">
         <div className="grid gap-4 lg:grid-cols-2">
           {workflowSteps.map((step, index) => (
-            <article key={step.title} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Step {index + 1}</p>
-              <h3 className="mt-2 text-lg font-semibold text-[#131E29]">{step.title}</h3>
+            <article key={step.title} className="rounded-[22px] bg-[rgba(255,255,255,0.58)] p-4">
+              <p className="section-kicker">Step {index + 1}</p>
+              <h3 className="mt-2 text-xl font-semibold text-[color:var(--ink)]">{step.title}</h3>
               <p className="mt-2 text-sm leading-6 text-slate-700">{step.body}</p>
             </article>
           ))}
@@ -150,7 +151,7 @@ export default function HowItWorksPage() {
           </p>
           <ul className="mt-4 space-y-2">
             {mobileBenefits.map((item) => (
-              <li key={item} className="rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-700">
+              <li key={item} className="rounded-[18px] bg-[rgba(255,255,255,0.58)] px-4 py-3 text-sm text-slate-700">
                 {item}
               </li>
             ))}
@@ -163,7 +164,7 @@ export default function HowItWorksPage() {
           </p>
           <ul className="mt-4 space-y-2">
             {desktopBenefits.map((item) => (
-              <li key={item} className="rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-700">
+              <li key={item} className="rounded-[18px] bg-[rgba(255,255,255,0.58)] px-4 py-3 text-sm text-slate-700">
                 {item}
               </li>
             ))}
@@ -175,7 +176,7 @@ export default function HowItWorksPage() {
         <SectionCard title="A Typical Keg Journey">
           <ol className="space-y-3">
             {kegJourney.map((step, index) => (
-              <li key={step} className="flex gap-3 rounded-xl bg-slate-50 p-4">
+              <li key={step} className="flex gap-3 rounded-[20px] bg-[rgba(255,255,255,0.58)] p-4">
                 <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#131E29] text-xs font-bold text-white">
                   {index + 1}
                 </span>
@@ -194,7 +195,7 @@ export default function HowItWorksPage() {
           </p>
           <ul className="mt-4 space-y-2">
             {qrBenefits.map((item) => (
-              <li key={item} className="rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-700">
+              <li key={item} className="rounded-[18px] bg-[rgba(255,255,255,0.58)] px-4 py-3 text-sm text-slate-700">
                 {item}
               </li>
             ))}
@@ -210,31 +211,31 @@ export default function HowItWorksPage() {
         </p>
         <ul className="mt-4 grid gap-3 sm:grid-cols-2">
           {futureFeatures.map((item) => (
-            <li key={item} className="rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-700">
+            <li key={item} className="rounded-[18px] bg-[rgba(255,255,255,0.58)] px-4 py-3 text-sm text-slate-700">
               {item}
             </li>
           ))}
         </ul>
       </SectionCard>
 
-      <section className="rounded-3xl border border-slate-200 bg-[#131E29] p-6 text-white shadow-sm">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-300">Try The Demo</p>
-        <h2 className="mt-3 text-3xl font-bold">Explore the workflow before full deployment.</h2>
+      <section className="editorial-panel editorial-panel--dark p-6 text-white shadow-sm">
+        <p className="eyebrow text-slate-300">Try The Demo</p>
+        <h2 className="mt-3 text-4xl font-semibold">Explore the workflow before full deployment.</h2>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-100">
           You can explore how the system works using demo mode. It is a preview of how the live product will function once fully deployed.
         </p>
         <ul className="mt-5 grid gap-3 sm:grid-cols-3">
           {demoBenefits.map((item) => (
-            <li key={item} className="rounded-xl border border-white/10 bg-white/8 px-4 py-3 text-sm text-slate-100">
+            <li key={item} className="rounded-[18px] border border-white/10 bg-[rgba(255,255,255,0.08)] px-4 py-3 text-sm text-slate-100">
               {item}
             </li>
           ))}
         </ul>
         <div className="mt-6 flex flex-wrap gap-3">
-          <Link href="/" className="inline-flex min-h-12 items-center rounded-xl bg-white px-5 font-semibold text-[#131E29]">
+          <Link href="/" className="glow-button inline-flex min-h-12 items-center rounded-full bg-white px-5 font-semibold text-[#131E29]">
             Go To Welcome Screen
           </Link>
-          <Link href="/login" className="inline-flex min-h-12 items-center rounded-xl border border-white/30 px-5 font-semibold text-white">
+          <Link href="/login" className="inline-flex min-h-12 items-center rounded-full border border-white/30 px-5 font-semibold text-white">
             Login Instead
           </Link>
         </div>

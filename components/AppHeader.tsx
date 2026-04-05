@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
+import { LogOut, ShieldCheck } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
 
 const AUTH_ROUTES = new Set(["/", "/login", "/change-password"]);
@@ -23,22 +24,23 @@ export function AppHeader() {
   }
 
   return (
-    <header className="sticky top-0 z-20 border-b border-white/10 bg-[#131E29] text-white">
-      <div className="mx-auto flex h-16 w-full max-w-5xl items-center justify-between px-4">
+    <header className="sticky top-0 z-30 px-3 pt-3 sm:px-4">
+      <div className="mx-auto flex w-full max-w-6xl items-center justify-between rounded-[28px] border border-white/10 bg-[#16202AE6] px-4 py-3 text-white shadow-[0_20px_38px_rgba(9,12,16,0.18)] backdrop-blur-xl sm:px-5">
         <div className="flex items-center gap-3">
           <Image
             src="https://beffect.nz/cdn/shop/files/Facebook-ProfileLogo-01_95.jpg?v=1671142822"
             alt="b.effect Brewing logo"
-            width={34}
-            height={34}
-            className="rounded-full border border-white/20 object-cover"
+            width={42}
+            height={42}
+            className="rounded-full border border-white/20 object-cover shadow-[0_8px_18px_rgba(0,0,0,0.25)]"
           />
           <div>
-            <p className="text-sm font-bold tracking-wide">b.effect</p>
-            <p className="text-xs text-slate-300">Keg Tracker</p>
+            <p className="brand-display text-lg font-semibold tracking-tight text-white">b.effect</p>
+            <p className="text-[11px] uppercase tracking-[0.26em] text-amber-100/80">Keg Tracker</p>
           </div>
           {isDemoUser && (
-            <span className="rounded-full border border-amber-300/60 bg-amber-200/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-amber-100">
+            <span className="badge-chip hidden items-center gap-1.5 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-50 sm:inline-flex">
+              <ShieldCheck className="h-3.5 w-3.5" strokeWidth={1.8} />
               Demo Mode
             </span>
           )}
@@ -46,15 +48,16 @@ export function AppHeader() {
 
         {!isAuthRoute && user && (
           <div className="flex items-center gap-3 text-right">
-            <div className="hidden sm:block">
-              <p className="text-xs font-semibold text-slate-100">{user.displayName}</p>
-              <p className="text-[11px] uppercase tracking-[0.12em] text-slate-300">{user.role}</p>
+            <div className="hidden rounded-full border border-white/10 bg-[rgba(255,255,255,0.06)] px-3 py-2 sm:block">
+              <p className="text-xs font-semibold text-slate-50">{user.displayName}</p>
+              <p className="text-[10px] uppercase tracking-[0.22em] text-slate-300">{user.role}</p>
             </div>
             <button
               type="button"
               onClick={onLogout}
-              className="rounded-lg border border-white/30 px-3 py-1.5 text-xs font-semibold text-white hover:bg-white/10"
+              className="glow-button inline-flex items-center gap-2 rounded-full border border-white/18 bg-[rgba(255,255,255,0.08)] px-4 py-2 text-xs font-semibold text-white hover:bg-[rgba(255,255,255,0.14)]"
             >
+              <LogOut className="h-3.5 w-3.5" strokeWidth={1.9} />
               Logout
             </button>
           </div>

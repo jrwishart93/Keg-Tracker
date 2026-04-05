@@ -9,22 +9,28 @@ export default async function KegsPage() {
   const activeKegs = [...kegs].sort((left, right) => (right.lastUpdatedAt ?? "").localeCompare(left.lastUpdatedAt ?? ""));
 
   return (
-    <main className="space-y-4">
-      <section className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:flex-row md:items-center md:justify-between">
+    <main className="page-shell space-y-5">
+      <section className="editorial-panel overflow-hidden p-5 sm:p-6">
         <div>
-          <h1 className="text-3xl font-bold text-[#131E29]">Active Kegs</h1>
-          <p className="mt-1 text-sm text-slate-600">
+          <p className="section-kicker">Fleet Overview</p>
+          <h1 className="mt-3 text-5xl font-semibold text-[color:var(--ink)]">Active Kegs</h1>
+          <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-600">
             Allocate a funny keg identity, print the QR sticker, and keep current and intended locations attached to that keg.
           </p>
         </div>
-        <Link
-          href="/kegs/new"
-          className="inline-flex min-h-12 items-center justify-center rounded-xl bg-[#131E29] px-5 font-semibold text-white"
-        >
-          Allocate Keg
-        </Link>
+        <div className="mt-5 flex flex-wrap gap-3">
+          <Link
+            href="/kegs/new"
+            className="glow-button inline-flex min-h-12 items-center justify-center rounded-full bg-[linear-gradient(135deg,#17212a,#324452)] px-5 font-semibold text-white"
+          >
+            Allocate Keg
+          </Link>
+          <div className="badge-chip inline-flex min-h-12 items-center rounded-full px-4 text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--ink)]">
+            {activeKegs.length} active records
+          </div>
+        </div>
       </section>
-      <div className="grid gap-3 md:grid-cols-2">
+      <div className="stagger-list grid gap-4 md:grid-cols-2">
         {activeKegs.map((keg) => (
           <KegCard key={keg.id} keg={keg} />
         ))}

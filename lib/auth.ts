@@ -1,14 +1,17 @@
 import {
-  EmailAuthProvider,
+  GoogleAuthProvider,
+  OAuthProvider,
   onAuthStateChanged,
-  reauthenticateWithCredential,
+  createUserWithEmailAndPassword,
+  signInWithPopup,
   signInWithEmailAndPassword,
   signOut,
-  updatePassword,
+  updateProfile,
+  type User,
 } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { disableDemoMode } from "@/lib/demo-mode";
-import { clearPasswordChangeRequirement, getUserById, updateUserLastLogin } from "@/lib/firestore";
+import { getUserById, updateUserLastLogin, upsertUserProfile } from "@/lib/firestore";
 import type { AppUser, UserRole } from "@/types/user";
 
 function requireAuth() {
@@ -30,46 +33,82 @@ function clearCookie(name: string) {
 function setSessionCookies(profile: AppUser) {
   setCookie("kt_session", "1");
   setCookie("kt_role", profile.role);
-  setCookie("kt_requires_password_change", profile.requiresPasswordChange ? "1" : "0");
 }
 
 function clearSessionCookies() {
   clearCookie("kt_session");
   clearCookie("kt_role");
-  clearCookie("kt_requires_password_change");
 }
 
-export async function loginWithEmail(email: string, password: string): Promise<AppUser | null> {
-  const result = await signInWithEmailAndPassword(requireAuth(), email, password);
-  const profile = await getUserById(result.user.uid);
-
-  if (!profile) {
-    clearSessionCookies();
-    return null;
+function getFallbackDisplayName(user: User, preferredDisplayName?: string) {
+  if (preferredDisplayName?.trim()) {
+    return preferredDisplayName.trim();
   }
 
-  // TEMPORARY demo bypass should not persist once a real auth session starts.
+  if (user.displayName?.trim()) {
+    return user.displayName.trim();
+  }
+
+  if (user.email) {
+    return user.email.split("@")[0];
+  }
+
+  return "Staff User";
+}
+
+async function bootstrapProfile(user: User, preferredDisplayName?: string): Promise<AppUser> {
+  let profile = await getUserById(user.uid);
+  const displayName = getFallbackDisplayName(user, preferredDisplayName);
+
+  if (!profile) {
+    await upsertUserProfile(user.uid, {
+      email: user.email ?? "",
+      displayName,
+      role: "staff",
+      requiresPasswordChange: false,
+    });
+    profile = await getUserById(user.uid);
+  }
+
+  if (!profile) {
+    throw new Error("No staff profile found for this account.");
+  }
+
   disableDemoMode();
-  await updateUserLastLogin(result.user.uid);
+  await updateUserLastLogin(user.uid);
   const updatedProfile = { ...profile, lastLoginAt: new Date().toISOString() };
   setSessionCookies(updatedProfile);
   return updatedProfile;
 }
 
-// Change-password flow reauthenticates first, then updates Auth password and Firestore flag.
-export async function completePasswordChange(currentPassword: string, newPassword: string) {
-  const currentAuth = requireAuth();
-  const user = currentAuth.currentUser;
+export async function loginWithEmail(email: string, password: string): Promise<AppUser | null> {
+  const result = await signInWithEmailAndPassword(requireAuth(), email, password);
+  return bootstrapProfile(result.user);
+}
 
-  if (!user || !user.email) {
-    throw new Error("No signed-in user available.");
+export async function signUpWithEmail(email: string, password: string, displayName?: string): Promise<AppUser> {
+  const result = await createUserWithEmailAndPassword(requireAuth(), email, password);
+
+  if (displayName?.trim()) {
+    await updateProfile(result.user, { displayName: displayName.trim() });
   }
 
-  const credential = EmailAuthProvider.credential(user.email, currentPassword);
-  await reauthenticateWithCredential(user, credential);
-  await updatePassword(user, newPassword);
-  await clearPasswordChangeRequirement(user.uid);
-  setCookie("kt_requires_password_change", "0");
+  return bootstrapProfile(result.user, displayName);
+}
+
+export async function signInWithGoogle(): Promise<AppUser> {
+  const provider = new GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: "select_account" });
+  const result = await signInWithPopup(requireAuth(), provider);
+  return bootstrapProfile(result.user);
+}
+
+export async function signInWithApple(): Promise<AppUser> {
+  const provider = new OAuthProvider("apple.com");
+  provider.addScope("email");
+  provider.addScope("name");
+  const result = await signInWithPopup(requireAuth(), provider);
+  return bootstrapProfile(result.user);
 }
 
 export async function logout() {
@@ -90,8 +129,13 @@ export function watchAuthState(callback: (user: AppUser | null) => void) {
       return;
     }
 
-    const profile = await getUserById(firebaseUser.uid);
-    callback(profile);
+    try {
+      const profile = await bootstrapProfile(firebaseUser);
+      callback(profile);
+    } catch {
+      clearSessionCookies();
+      callback(null);
+    }
   });
 }
 

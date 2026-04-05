@@ -98,7 +98,7 @@ export function ActionForm({
   }
 
   function renderField(field: FieldConfig) {
-    const commonInputClass = "mt-1 min-h-12 w-full rounded-lg border border-slate-300 bg-slate-50 px-3 text-slate-900";
+    const commonInputClass = "field-shell mt-2 min-h-12 w-full rounded-[18px] px-4 text-slate-900";
     const value = form[field.key] ?? "";
 
     if (field.type === "select") {
@@ -123,7 +123,7 @@ export function ActionForm({
     if (field.type === "notes") {
       return (
         <textarea
-          className="mt-1 w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-slate-900"
+          className="field-shell mt-2 w-full rounded-[18px] px-4 py-3 text-slate-900"
           value={value}
           rows={3}
           onChange={(event) => updateField(field.key, event.target.value)}
@@ -177,13 +177,13 @@ export function ActionForm({
     >
       {fields.map((field) => (
         <label key={field.key} className="block">
-          <span className="block text-xs font-semibold tracking-[0.12em] text-slate-500">{field.label.toUpperCase()}</span>
+          <span className="section-kicker">{field.label}</span>
           {renderField(field)}
         </label>
       ))}
       <button
         type="submit"
-        className={`min-h-12 w-full rounded-lg px-4 font-semibold text-white ${destructiveAction ? "bg-rose-700" : "bg-[#131E29]"}`}
+        className={`min-h-13 w-full rounded-full px-4 font-semibold text-white ${destructiveAction ? "bg-rose-700 shadow-[0_18px_30px_rgba(190,18,60,0.2)]" : "glow-button bg-[linear-gradient(135deg,#17212a,#324452)]"}`}
       >
         Submit
       </button>
