@@ -1,19 +1,14 @@
-export type MovementAction =
-  | "check_in"
-  | "check_out"
-  | "fill"
-  | "empty"
-  | "ready_for_pickup"
-  | "maintenance"
-  | "lost";
+export type MovementAction = "fill" | "deliver" | "return" | "empty" | "maintenance" | "lost";
 
 export interface Movement {
   id: string;
   kegId: string;
-  action: MovementAction;
-  fromLocationId?: string;
-  toLocationId?: string;
+  scanType: MovementAction;
+  fromLocation?: string;
+  toLocation?: string;
+  product?: string;
+  batch?: string;
+  timestamp?: string;
   notes?: string;
-  createdBy: string;
-  createdAt?: string;
+  updatedBy: string;
 }

@@ -16,13 +16,13 @@ export default async function KegDetailPage({ params }: { params: Promise<{ id: 
   return (
     <main className="space-y-5">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Keg #{keg.id}</h1>
-        <StatusBadge status={keg.status} />
+        <h1 className="text-3xl font-bold">Keg #{keg.kegId ?? keg.id}</h1>
+        <StatusBadge status={keg.currentStatus} />
       </div>
       <div className="rounded-xl border border-slate-200 bg-white p-4">
-        <p>Current location: {keg.locationId}</p>
-        <p>Current product: {keg.productId ?? "n/a"}</p>
-        <p>Last updated: {keg.updatedAt ?? "n/a"}</p>
+        <p>Current location: {keg.currentLocation}</p>
+        <p>Current product: {keg.product ?? "n/a"}</p>
+        <p>Last updated: {keg.lastUpdatedAt ?? "n/a"}</p>
       </div>
       <Link href={`/kegs/${keg.id}/action`} className="inline-flex min-h-11 items-center rounded-lg bg-slate-900 px-4 text-white">
         Update this keg

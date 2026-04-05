@@ -1,18 +1,16 @@
-export type KegStatus =
-  | "on_site"
-  | "off_site"
-  | "empty"
-  | "maintenance"
-  | "lost"
-  | "ready_for_pickup";
+export type KegStatus = "filled" | "delivered" | "returned" | "empty" | "maintenance" | "lost";
 
 export interface Keg {
   id: string;
-  qrCodeValue: string;
-  status: KegStatus;
-  locationId: string;
-  productId?: string;
-  beerName?: string;
+  kegId?: string;
+  qrCode: string;
+  currentStatus: KegStatus;
+  currentLocation: string;
+  product?: string;
   batch?: string;
-  updatedAt?: string;
+  beerName?: string;
+  abv?: number;
+  packagingDate?: string;
+  bestBeforeDate?: string;
+  lastUpdatedAt?: string;
 }

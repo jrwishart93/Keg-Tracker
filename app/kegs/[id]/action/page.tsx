@@ -1,34 +1,59 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
 import { ActionForm } from "@/components/ActionForm";
-import { createMovement, updateKeg } from "@/lib/firestore";
+import { createMovement, getLocations, getProducts, seedCoreData, updateKeg } from "@/lib/firestore";
 import type { KegStatus } from "@/types/keg";
 import type { MovementAction } from "@/types/movement";
 
-const actions: MovementAction[] = ["check_in", "check_out", "fill", "empty", "ready_for_pickup", "maintenance", "lost"];
+const actions: MovementAction[] = ["fill", "deliver", "return", "empty", "maintenance", "lost"];
 
 const actionToStatus: Record<MovementAction, KegStatus> = {
-  check_in: "on_site",
-  check_out: "off_site",
-  fill: "on_site",
+  fill: "filled",
+  deliver: "delivered",
+  return: "returned",
   empty: "empty",
-  ready_for_pickup: "ready_for_pickup",
   maintenance: "maintenance",
   lost: "lost",
 };
 
+const actionLabels: Record<MovementAction, string> = {
+  fill: "Fill",
+  deliver: "Deliver",
+  return: "Return",
+  empty: "Empty",
+  maintenance: "Maintenance",
+  lost: "Lost",
+};
+
 export default function KegActionPage({ params }: { params: { id: string } }) {
-  const [selectedAction, setSelectedAction] = useState<MovementAction>("check_in");
+  const [selectedAction, setSelectedAction] = useState<MovementAction>("fill");
   const [loading, setLoading] = useState(false);
+  const [locationNames, setLocationNames] = useState<string[]>(["Brewery", "b.social / Tap Room"]);
+  const [products, setProducts] = useState<{ id: string; name: string; abv: number }[]>([]);
   const router = useRouter();
+
+  useEffect(() => {
+    async function loadReferenceData() {
+      await seedCoreData();
+      const [locations, loadedProducts] = await Promise.all([getLocations(), getProducts()]);
+      if (locations.length > 0) {
+        setLocationNames(Array.from(new Set(locations.map((location) => location.name))));
+      }
+      setProducts(loadedProducts);
+    }
+
+    void loadReferenceData();
+  }, []);
+
+  const selectedActionLabel = useMemo(() => actionLabels[selectedAction], [selectedAction]);
 
   return (
     <main className="space-y-4">
-      <h1 className="text-3xl font-bold">Update Keg</h1>
+      <h1 className="text-3xl font-bold">Scan Keg Barcodes</h1>
       <label className="block">
-        <span className="mb-1 block text-sm font-medium">Action</span>
+        <span className="mb-1 block text-sm font-medium">Scan Type</span>
         <select
           value={selectedAction}
           onChange={(event) => setSelectedAction(event.target.value as MovementAction)}
@@ -36,26 +61,45 @@ export default function KegActionPage({ params }: { params: { id: string } }) {
         >
           {actions.map((action) => (
             <option key={action} value={action}>
-              {action.replaceAll("_", " ")}
+              {actionLabels[action]}
             </option>
           ))}
         </select>
       </label>
       <ActionForm
+        key={selectedAction}
         actionType={selectedAction}
+        locations={locationNames}
+        products={products}
         onSubmit={async (fields) => {
           setLoading(true);
+
+          const now = new Date().toISOString();
           await updateKeg(params.id, {
-            status: actionToStatus[selectedAction],
-            updatedAt: new Date().toISOString(),
+            kegId: params.id,
+            currentStatus: actionToStatus[selectedAction],
+            currentLocation: fields.currentLocation ?? fields.lastKnownLocation ?? "Brewery",
+            product: fields.product,
+            batch: fields.batch,
+            beerName: fields.beerName,
+            abv: fields.abv ? Number(fields.abv) : undefined,
+            packagingDate: fields.packagingDate,
+            bestBeforeDate: fields.bestBeforeDate,
+            lastUpdatedAt: now,
           });
+
           await createMovement({
             kegId: params.id,
-            action: selectedAction,
-            createdBy: "current-user",
-            notes: JSON.stringify(fields),
-            createdAt: new Date().toISOString(),
+            scanType: selectedAction,
+            fromLocation: fields.currentLocation,
+            toLocation: fields.nextLocation,
+            product: fields.product,
+            batch: fields.batch,
+            timestamp: now,
+            notes: JSON.stringify({ ...fields, scanType: selectedActionLabel }),
+            updatedBy: "current-user",
           });
+
           router.push(`/kegs/${params.id}`);
         }}
       />
