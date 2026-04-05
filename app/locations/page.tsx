@@ -1,10 +1,8 @@
 export const dynamic = "force-dynamic";
 
-import { getLocations } from "@/lib/firestore";
+import { LocationsClient } from "@/components/LocationsClient";
 
-export default async function LocationsPage() {
-  const locations = await getLocations();
-
+export default function LocationsPage() {
   return (
     <main className="page-shell space-y-5">
       <section className="editorial-panel p-5 sm:p-6">
@@ -15,15 +13,7 @@ export default async function LocationsPage() {
         </p>
       </section>
 
-      <ul className="stagger-list grid gap-4 md:grid-cols-2">
-        {locations.map((location) => (
-          <li key={location.id} className="editorial-panel card-hover p-5">
-            <p className="section-kicker">{location.type}</p>
-            <p className="mt-2 text-2xl font-semibold text-[color:var(--ink)]">{location.name}</p>
-            <p className="mt-3 text-sm text-slate-600">Available as a current or intended destination throughout the movement workflow.</p>
-          </li>
-        ))}
-      </ul>
+      <LocationsClient />
     </main>
   );
 }
