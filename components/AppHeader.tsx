@@ -15,7 +15,7 @@ export function AppHeader() {
     signOut,
   } = useAuth();
 
-  const isAuthRoute = AUTH_ROUTES.has(pathname);
+  const isAuthRoute = AUTH_ROUTES.has(pathname) || pathname.startsWith("/keg/");
   const isDemoUser = user?.role === "demo";
 
   async function onLogout() {

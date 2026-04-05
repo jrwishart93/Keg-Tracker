@@ -1,15 +1,15 @@
 "use client";
 
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { startTransition } from "react";
 import { enableDemoMode } from "@/lib/demo-mode";
 
 export default function WelcomePage() {
-  const router = useRouter();
-
   function onTryDemo() {
     enableDemoMode();
-    router.push("/dashboard");
+    startTransition(() => {
+      window.location.href = "/demo";
+    });
   }
 
   return (
@@ -71,14 +71,18 @@ export default function WelcomePage() {
             </button>
             <button
               type="button"
-              onClick={() => router.push("/login")}
+              onClick={() => {
+                window.location.href = "/login";
+              }}
               className="min-h-13 rounded-full border border-white/20 bg-white/10 px-6 font-semibold text-white hover:bg-white/16"
             >
               Sign In Or Create Account
             </button>
             <button
               type="button"
-              onClick={() => router.push("/how-it-works")}
+              onClick={() => {
+                window.location.href = "/how-it-works";
+              }}
               className="min-h-13 rounded-full border border-white/10 bg-[rgba(0,0,0,0.1)] px-6 font-semibold text-slate-100 hover:bg-[rgba(0,0,0,0.18)]"
             >
               How It Works

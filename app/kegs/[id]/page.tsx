@@ -2,6 +2,8 @@ export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { FreshnessBadge } from "@/components/FreshnessBadge";
+import { KegLifecyclePanel } from "@/components/KegLifecyclePanel";
 import { MovementLog } from "@/components/MovementLog";
 import { StatusBadge } from "@/components/StatusBadge";
 import { getKegById, getMovementsByKeg } from "@/lib/firestore";
@@ -21,9 +23,12 @@ export default async function KegDetailPage({ params }: { params: Promise<{ id: 
             <p className="section-kicker">Keg Record</p>
             <h1 className="mt-3 text-5xl font-semibold text-[color:var(--ink)]">{keg.kegId ?? keg.id}</h1>
           </div>
-          <StatusBadge status={keg.currentStatus} />
+          <div className="flex flex-wrap gap-2">
+            <StatusBadge status={keg.currentStatus} />
+            <FreshnessBadge bestBefore={keg.bestBefore ?? keg.bestBeforeDate} />
+          </div>
         </div>
-        <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <div className="rounded-[20px] bg-[rgba(255,255,255,0.6)] p-4">
             <p className="section-kicker">Current Location</p>
             <p className="mt-2 text-sm font-medium text-slate-800">{keg.currentLocation}</p>
@@ -34,17 +39,35 @@ export default async function KegDetailPage({ params }: { params: Promise<{ id: 
           </div>
           <div className="rounded-[20px] bg-[rgba(255,255,255,0.6)] p-4">
             <p className="section-kicker">Current Product</p>
-            <p className="mt-2 text-sm font-medium text-slate-800">{keg.product ?? "n/a"}</p>
+            <p className="mt-2 text-sm font-medium text-slate-800">{keg.productName ?? keg.beerName ?? keg.product ?? "n/a"}</p>
+          </div>
+          <div className="rounded-[20px] bg-[rgba(255,255,255,0.6)] p-4">
+            <p className="section-kicker">Assigned Customer</p>
+            <p className="mt-2 text-sm font-medium text-slate-800">{keg.assignedCustomerId ?? "Not assigned"}</p>
           </div>
         </div>
-        <div className="mt-4 grid gap-4 xl:grid-cols-[1.3fr_1fr]">
+        <div className="mt-4 grid gap-4 xl:grid-cols-2">
           <div className="rounded-[20px] bg-[rgba(255,255,255,0.6)] p-4">
             <p className="section-kicker">QR Payload</p>
             <p className="mt-2 break-all text-sm leading-6 text-slate-700">{keg.qrCode}</p>
           </div>
           <div className="rounded-[20px] bg-[rgba(255,255,255,0.6)] p-4">
             <p className="section-kicker">Last Updated</p>
-            <p className="mt-2 text-sm leading-6 text-slate-700">{keg.lastUpdatedAt ?? "n/a"}</p>
+            <p className="mt-2 text-sm leading-6 text-slate-700">{keg.lastUpdated ?? keg.lastUpdatedAt ?? "n/a"}</p>
+          </div>
+        </div>
+        <div className="mt-4 grid gap-4 md:grid-cols-3">
+          <div className="rounded-[20px] bg-[rgba(255,255,255,0.6)] p-4">
+            <p className="section-kicker">Washed At</p>
+            <p className="mt-2 text-sm leading-6 text-slate-700">{keg.washedAt ?? "Not recorded"}</p>
+          </div>
+          <div className="rounded-[20px] bg-[rgba(255,255,255,0.6)] p-4">
+            <p className="section-kicker">Filled At</p>
+            <p className="mt-2 text-sm leading-6 text-slate-700">{keg.filledAt ?? "Not recorded"}</p>
+          </div>
+          <div className="rounded-[20px] bg-[rgba(255,255,255,0.6)] p-4">
+            <p className="section-kicker">Best Before</p>
+            <p className="mt-2 text-sm leading-6 text-slate-700">{keg.bestBefore ?? keg.bestBeforeDate ?? "Not set"}</p>
           </div>
         </div>
       </section>
@@ -57,6 +80,8 @@ export default async function KegDetailPage({ params }: { params: Promise<{ id: 
           Print sticker
         </Link>
       </div>
+
+      <KegLifecyclePanel keg={keg} />
 
       <section className="space-y-4">
         <div>

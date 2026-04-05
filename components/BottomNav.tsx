@@ -31,7 +31,7 @@ function NavIcon({ label }: { label: string }) {
 export function BottomNav() {
   const pathname = usePathname();
 
-  if (hiddenRoutes.has(pathname)) {
+  if (hiddenRoutes.has(pathname) || pathname.startsWith("/keg/")) {
     return null;
   }
 

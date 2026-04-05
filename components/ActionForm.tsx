@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { MovementAction } from "@/types/movement";
+import type { StaffMovementAction } from "@/types/movement";
 import type { Product } from "@/lib/firestore";
 
 type FieldType = "text" | "date" | "select" | "notes" | "location-search";
@@ -14,7 +14,11 @@ interface FieldConfig {
   optional?: boolean;
 }
 
-const actionFields: Record<MovementAction, FieldConfig[]> = {
+const actionFields: Record<StaffMovementAction, FieldConfig[]> = {
+  wash: [
+    { key: "currentLocation", label: "Current Location", type: "select", options: ["Brewery", "b.social / Tap Room"] },
+    { key: "notes", label: "Notes", type: "notes", optional: true },
+  ],
   fill: [
     { key: "currentLocation", label: "Current Location", type: "select", options: ["Brewery", "b.social / Tap Room"] },
     { key: "product", label: "Product", type: "select" },
@@ -27,6 +31,7 @@ const actionFields: Record<MovementAction, FieldConfig[]> = {
   ],
   deliver: [
     { key: "currentLocation", label: "Current Location", type: "select", options: ["Brewery", "b.social / Tap Room"] },
+    { key: "customerName", label: "Customer", type: "text" },
     { key: "nextLocation", label: "Next Location", type: "location-search" },
     { key: "carrier", label: "Carrier", type: "text" },
   ],
@@ -74,7 +79,7 @@ export function ActionForm({
   products,
   onSubmit,
 }: {
-  actionType: MovementAction;
+  actionType: StaffMovementAction;
   locations: string[];
   products: Product[];
   onSubmit: (fields: Record<string, string>) => Promise<void>;

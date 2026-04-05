@@ -26,7 +26,7 @@ export function MovementLog({ movements }: { movements: Movement[] }) {
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <p className="section-kicker">Movement</p>
-              <p className="mt-2 text-xl font-semibold capitalize text-[color:var(--ink)]">{movement.scanType}</p>
+              <p className="mt-2 text-xl font-semibold capitalize text-[color:var(--ink)]">{movement.type === "delivery" ? "delivery" : movement.scanType}</p>
             </div>
             <span className="badge-chip px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[color:var(--ink)]">
               {movement.timestamp ? new Date(movement.timestamp).toLocaleDateString() : "Recorded"}
@@ -48,6 +48,7 @@ export function MovementLog({ movements }: { movements: Movement[] }) {
               </p>
             </div>
           </div>
+          {movement.notes ? <p className="mt-4 text-sm text-slate-600">{movement.notes}</p> : null}
         </li>
       ))}
     </ul>

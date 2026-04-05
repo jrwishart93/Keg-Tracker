@@ -203,6 +203,8 @@ export const DEFAULT_KEG_NAMES = [
   "Keg Sync",
 ] as const;
 
+const PUBLIC_APP_URL_FALLBACK = "https://keg-tracker.vercel.app";
+
 export function slugifyKegName(name: string) {
   return name
     .toLowerCase()
@@ -212,12 +214,52 @@ export function slugifyKegName(name: string) {
     .replace(/[-\s]+/g, "-");
 }
 
+function getPublicAppUrl() {
+  if (typeof window !== "undefined" && window.location.origin) {
+    return window.location.origin.replace(/\/+$/, "");
+  }
+
+  return (process.env.NEXT_PUBLIC_APP_URL ?? PUBLIC_APP_URL_FALLBACK).replace(/\/+$/, "");
+}
+
+export function buildCustomerKegPath(name: string) {
+  return `/keg/${slugifyKegName(name)}`;
+}
+
+export function buildCustomerKegUrl(name: string) {
+  return `${getPublicAppUrl()}${buildCustomerKegPath(name)}`;
+}
+
 export function buildQrCodeValue(name: string) {
-  return `keg-tracker:${slugifyKegName(name)}`;
+  return buildCustomerKegUrl(name);
+}
+
+export function getKegIdFromQrValue(value: string) {
+  const normalizedValue = value.trim();
+
+  if (!normalizedValue) {
+    return null;
+  }
+
+  if (normalizedValue.startsWith("keg-tracker:")) {
+    return normalizedValue.slice("keg-tracker:".length) || null;
+  }
+
+  if (normalizedValue.startsWith("/keg/")) {
+    return normalizedValue.split("/keg/")[1]?.split(/[/?#]/)[0] ?? null;
+  }
+
+  try {
+    const url = new URL(normalizedValue);
+    const match = url.pathname.match(/^\/keg\/([^/?#]+)/);
+    return match?.[1] ?? null;
+  } catch {
+    return null;
+  }
 }
 
 export function isValidQrCodeValue(value: string) {
-  return value.startsWith("keg-tracker:") && value.length > "keg-tracker:".length;
+  return Boolean(getKegIdFromQrValue(value));
 }
 
 export function normalizeKegNameInput(name: string) {

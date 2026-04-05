@@ -1,4 +1,4 @@
-import { AlertTriangle, Beer, CircleOff, RotateCcw, Settings2, Truck } from "lucide-react";
+import { AlertTriangle, Beer, CircleOff, Droplets, RotateCcw, Settings2, Truck } from "lucide-react";
 import type { KegStatus } from "@/types/keg";
 
 const statusClasses: Record<KegStatus, string> = {
@@ -6,6 +6,7 @@ const statusClasses: Record<KegStatus, string> = {
   delivered: "border-sky-300/60 bg-sky-100/80 text-sky-900",
   returned: "border-lime-300/60 bg-lime-100/80 text-lime-900",
   empty: "border-amber-300/60 bg-amber-100/80 text-amber-900",
+  washed: "border-cyan-300/60 bg-cyan-100/80 text-cyan-900",
   maintenance: "border-stone-300/60 bg-stone-200/75 text-stone-900",
   lost: "border-rose-300/60 bg-rose-100/80 text-rose-900",
 };
@@ -15,6 +16,7 @@ const statusIcons: Record<KegStatus, typeof Beer> = {
   delivered: Truck,
   returned: RotateCcw,
   empty: CircleOff,
+  washed: Droplets,
   maintenance: Settings2,
   lost: AlertTriangle,
 };

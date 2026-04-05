@@ -3,14 +3,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ActionForm } from "@/components/ActionForm";
+import { useAuth } from "@/context/auth-context";
 import { createMovement, getKegById, getLocations, getProducts, seedCoreData, updateKeg } from "@/lib/firestore";
 import type { Keg } from "@/types/keg";
 import type { KegStatus } from "@/types/keg";
-import type { MovementAction } from "@/types/movement";
+import type { StaffMovementAction } from "@/types/movement";
 
-const actions: MovementAction[] = ["fill", "deliver", "return", "empty", "maintenance", "lost"];
+const actions: StaffMovementAction[] = ["wash", "fill", "deliver", "return", "empty", "maintenance", "lost"];
 
-const actionToStatus: Record<MovementAction, KegStatus> = {
+const actionToStatus: Record<StaffMovementAction, KegStatus> = {
+  wash: "washed",
   fill: "filled",
   deliver: "delivered",
   return: "returned",
@@ -19,7 +21,8 @@ const actionToStatus: Record<MovementAction, KegStatus> = {
   lost: "lost",
 };
 
-const actionLabels: Record<MovementAction, string> = {
+const actionLabels: Record<StaffMovementAction, string> = {
+  wash: "Wash",
   fill: "Fill",
   deliver: "Deliver",
   return: "Return",
@@ -29,11 +32,14 @@ const actionLabels: Record<MovementAction, string> = {
 };
 
 export default function KegActionPage({ params }: { params: { id: string } }) {
-  const [selectedAction, setSelectedAction] = useState<MovementAction>("fill");
+  const [selectedAction, setSelectedAction] = useState<StaffMovementAction>("fill");
   const [loading, setLoading] = useState(false);
   const [keg, setKeg] = useState<Keg | null>(null);
   const [locationNames, setLocationNames] = useState<string[]>(["Brewery", "b.social / Tap Room"]);
   const [products, setProducts] = useState<{ id: string; name: string; abv: number }[]>([]);
+  const {
+    state: { user },
+  } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -68,6 +74,98 @@ export default function KegActionPage({ params }: { params: { id: string } }) {
     return keg?.intendedLocation;
   }
 
+  function buildKegPatch(fields: Record<string, string>, now: string): Record<string, unknown> {
+    if (selectedAction === "wash") {
+      return {
+        currentLocation: getNextCurrentLocation(fields),
+        currentStatus: "washed",
+        status: "washed",
+        washedAt: now,
+        filledAt: null,
+        bestBefore: null,
+        productName: null,
+        batchNumber: null,
+        assignedCustomerId: null,
+        product: null,
+        beerName: null,
+        batch: null,
+        packagingDate: null,
+        bestBeforeDate: null,
+        lastUpdatedAt: now,
+        lastUpdated: now,
+      };
+    }
+
+    if (selectedAction === "fill") {
+      const productName = fields.product || fields.beerName || keg?.productName || keg?.product;
+      const batchNumber = fields.batch || keg?.batchNumber || keg?.batch;
+      const bestBefore = fields.bestBeforeDate || keg?.bestBefore || keg?.bestBeforeDate;
+
+      return {
+        currentLocation: getNextCurrentLocation(fields),
+        intendedLocation: getNextIntendedLocation(fields),
+        currentStatus: "filled",
+        status: "filled",
+        filledAt: now,
+        bestBefore: bestBefore || null,
+        productName: productName || null,
+        batchNumber: batchNumber || null,
+        product: productName,
+        beerName: productName,
+        batch: batchNumber,
+        abv: fields.abv ? Number(fields.abv) : keg?.abv,
+        packagingDate: fields.packagingDate || now,
+        bestBeforeDate: bestBefore,
+        lastUpdatedAt: now,
+        lastUpdated: now,
+      };
+    }
+
+    if (selectedAction === "deliver") {
+      return {
+        currentLocation: getNextCurrentLocation(fields),
+        intendedLocation: getNextIntendedLocation(fields),
+        currentStatus: "delivered",
+        status: "delivered",
+        assignedCustomerId: fields.customerName || keg?.assignedCustomerId || null,
+        productName: keg?.productName ?? keg?.product ?? null,
+        batchNumber: keg?.batchNumber ?? keg?.batch ?? null,
+        lastUpdatedAt: now,
+        lastUpdated: now,
+      };
+    }
+
+    if (selectedAction === "return") {
+      return {
+        currentLocation: getNextCurrentLocation(fields),
+        intendedLocation: getNextIntendedLocation(fields),
+        currentStatus: "returned",
+        status: "returned",
+        assignedCustomerId: null,
+        lastUpdatedAt: now,
+        lastUpdated: now,
+      };
+    }
+
+    return {
+      currentLocation: getNextCurrentLocation(fields),
+      intendedLocation: getNextIntendedLocation(fields),
+      currentStatus: actionToStatus[selectedAction],
+      status: actionToStatus[selectedAction],
+      productName: keg?.productName ?? keg?.product ?? null,
+      batchNumber: keg?.batchNumber ?? keg?.batch ?? null,
+      product: fields.product ?? keg?.product,
+      batch: fields.batch ?? keg?.batch,
+      beerName: fields.beerName ?? keg?.beerName,
+      abv: fields.abv ? Number(fields.abv) : keg?.abv,
+      packagingDate: fields.packagingDate ?? keg?.packagingDate,
+      bestBeforeDate: fields.bestBeforeDate ?? keg?.bestBeforeDate,
+      bestBefore: fields.bestBeforeDate ?? keg?.bestBefore ?? keg?.bestBeforeDate ?? null,
+      lastUpdatedAt: now,
+      lastUpdated: now,
+    };
+  }
+
   return (
     <main className="page-shell space-y-5">
       <section className="editorial-panel p-5 sm:p-6">
@@ -79,7 +177,7 @@ export default function KegActionPage({ params }: { params: { id: string } }) {
         <span className="section-kicker">Scan Type</span>
         <select
           value={selectedAction}
-          onChange={(event) => setSelectedAction(event.target.value as MovementAction)}
+          onChange={(event) => setSelectedAction(event.target.value as StaffMovementAction)}
           className="field-shell mt-2 min-h-12 w-full rounded-[18px] px-4"
         >
           {actions.map((action) => (
@@ -99,29 +197,20 @@ export default function KegActionPage({ params }: { params: { id: string } }) {
             setLoading(true);
 
             const now = new Date().toISOString();
-            await updateKeg(params.id, {
-              currentLocation: getNextCurrentLocation(fields),
-              intendedLocation: getNextIntendedLocation(fields),
-              currentStatus: actionToStatus[selectedAction],
-              product: fields.product ?? keg?.product,
-              batch: fields.batch ?? keg?.batch,
-              beerName: fields.beerName ?? keg?.beerName,
-              abv: fields.abv ? Number(fields.abv) : keg?.abv,
-              packagingDate: fields.packagingDate ?? keg?.packagingDate,
-              bestBeforeDate: fields.bestBeforeDate ?? keg?.bestBeforeDate,
-              lastUpdatedAt: now,
-            });
+            await updateKeg(params.id, buildKegPatch(fields, now));
 
             await createMovement({
               kegId: keg?.kegId ?? params.id,
               scanType: selectedAction,
+              type: selectedAction === "deliver" ? "delivery" : selectedAction,
               fromLocation: fields.currentLocation,
               toLocation: fields.nextLocation,
-              product: fields.product ?? keg?.product,
+              product: fields.product ?? fields.beerName ?? keg?.productName ?? keg?.product,
               batch: fields.batch,
               timestamp: now,
+              userId: user?.uid ?? "current-user",
               notes: JSON.stringify({ ...fields, scanType: selectedActionLabel }),
-              updatedBy: "current-user",
+              updatedBy: user?.displayName ?? user?.email ?? "current-user",
             });
 
             router.push(`/kegs/${params.id}`);
