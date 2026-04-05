@@ -1,5 +1,4 @@
-import { getApps, initializeApp } from "firebase/app";
-import { getAnalytics, isSupported } from "firebase/analytics";
+import { FirebaseApp, getApp, getApps, initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
@@ -13,13 +12,12 @@ const firebaseConfig = {
   measurementId: "G-4MXK8TFKBV",
 };
 
-const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+const isAlreadyInitialized = getApps().length > 0;
 
+export const app: FirebaseApp = isAlreadyInitialized ? getApp() : initializeApp(firebaseConfig);
 export const db = getFirestore(app);
-export const auth = typeof window !== "undefined" ? getAuth(app) : null;
+export const auth = getAuth(app);
 
-export async function initAnalytics() {
-  if (typeof window === "undefined") return null;
-  const supported = await isSupported();
-  return supported ? getAnalytics(app) : null;
+if (typeof window !== "undefined") {
+  console.log(`[Firebase] Initialized app for project: ${app.options.projectId ?? "unknown"}`);
 }

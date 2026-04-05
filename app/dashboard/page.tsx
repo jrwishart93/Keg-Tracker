@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import Image from "next/image";
 import { getKegs, getRecentMovements } from "@/lib/firestore";
 import { MovementLog } from "@/components/MovementLog";
+import { FirebaseConnectionTestButton } from "@/components/FirebaseConnectionTestButton";
 
 export default async function DashboardPage() {
   const [kegs, movements] = await Promise.all([getKegs(), getRecentMovements()]);
@@ -27,6 +28,11 @@ export default async function DashboardPage() {
             <p className="text-3xl font-bold text-[#131E29]">{value}</p>
           </div>
         ))}
+      </section>
+      <section className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+        <h2 className="mb-2 text-lg font-semibold">Firebase check</h2>
+        <p className="mb-3 text-sm text-slate-600">Use this temporary button to verify Firestore write access.</p>
+        <FirebaseConnectionTestButton />
       </section>
       <section>
         <h2 className="mb-3 text-lg font-semibold">Recent movements</h2>
