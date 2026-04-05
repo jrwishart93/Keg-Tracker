@@ -7,6 +7,7 @@ import {
   updatePassword,
 } from "firebase/auth";
 import { auth } from "@/lib/firebase";
+import { disableDemoMode } from "@/lib/demo-mode";
 import { clearPasswordChangeRequirement, getUserById, updateUserLastLogin } from "@/lib/firestore";
 import type { AppUser, UserRole } from "@/types/user";
 
@@ -32,17 +33,23 @@ function setSessionCookies(profile: AppUser) {
   setCookie("kt_requires_password_change", profile.requiresPasswordChange ? "1" : "0");
 }
 
+function clearSessionCookies() {
+  clearCookie("kt_session");
+  clearCookie("kt_role");
+  clearCookie("kt_requires_password_change");
+}
+
 export async function loginWithEmail(email: string, password: string): Promise<AppUser | null> {
   const result = await signInWithEmailAndPassword(requireAuth(), email, password);
   const profile = await getUserById(result.user.uid);
 
   if (!profile) {
-    clearCookie("kt_session");
-    clearCookie("kt_role");
-    clearCookie("kt_requires_password_change");
+    clearSessionCookies();
     return null;
   }
 
+  // TEMPORARY demo bypass should not persist once a real auth session starts.
+  disableDemoMode();
   await updateUserLastLogin(result.user.uid);
   const updatedProfile = { ...profile, lastLoginAt: new Date().toISOString() };
   setSessionCookies(updatedProfile);
@@ -66,10 +73,14 @@ export async function completePasswordChange(currentPassword: string, newPasswor
 }
 
 export async function logout() {
-  await signOut(requireAuth());
-  clearCookie("kt_session");
-  clearCookie("kt_role");
-  clearCookie("kt_requires_password_change");
+  const currentAuth = requireAuth();
+
+  if (currentAuth.currentUser) {
+    await signOut(currentAuth);
+  }
+
+  clearSessionCookies();
+  disableDemoMode();
 }
 
 export function watchAuthState(callback: (user: AppUser | null) => void) {

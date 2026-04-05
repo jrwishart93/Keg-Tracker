@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const PUBLIC_ROUTES = new Set(["/login"]);
+const PUBLIC_ROUTES = new Set(["/", "/login"]);
 const PASSWORD_CHANGE_ROUTE = "/change-password";
 
 export function proxy(request: NextRequest) {
@@ -12,18 +12,20 @@ export function proxy(request: NextRequest) {
   }
 
   const isAuthenticated = Boolean(request.cookies.get("kt_session")?.value);
+  const isDemoMode = request.cookies.get("kt_demo")?.value === "1";
+  const hasAccess = isAuthenticated || isDemoMode;
   const requiresPasswordChange = request.cookies.get("kt_requires_password_change")?.value === "1";
   const role = request.cookies.get("kt_role")?.value;
 
   const isPublicRoute = PUBLIC_ROUTES.has(pathname);
   const isPasswordChangeRoute = pathname === PASSWORD_CHANGE_ROUTE;
 
-  if (!isAuthenticated && !isPublicRoute) {
-    return NextResponse.redirect(new URL("/login", request.url));
+  if (!hasAccess && !isPublicRoute) {
+    return NextResponse.redirect(new URL("/", request.url));
   }
 
-  if (isAuthenticated && isPublicRoute) {
-    const destination = requiresPasswordChange ? PASSWORD_CHANGE_ROUTE : "/dashboard";
+  if (hasAccess && isPublicRoute) {
+    const destination = isAuthenticated && requiresPasswordChange ? PASSWORD_CHANGE_ROUTE : "/dashboard";
     return NextResponse.redirect(new URL(destination, request.url));
   }
 

@@ -88,7 +88,7 @@ export default function LoginPage() {
             disabled={loading}
             className="min-h-12 w-full rounded-lg bg-[#131E29] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-75"
           >
-            {loading ? "Signing in..." : "Start Shift"}
+            {loading ? "Signing in..." : "Login"}
           </button>
         </form>
       </section>
