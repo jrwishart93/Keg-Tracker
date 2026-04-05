@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { loginWithEmail } from "@/lib/auth";
@@ -26,35 +27,54 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="mx-auto mt-10 max-w-md rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-      <h1 className="text-2xl font-bold">Keg Tracker Login</h1>
-      <p className="mt-2 text-sm text-slate-600">Sign in with your staff account.</p>
-      <form className="mt-5 space-y-4" onSubmit={onSubmit}>
-        <label className="block">
-          <span className="mb-1 block text-sm font-medium">Email</span>
-          <input
-            required
-            type="email"
-            className="min-h-11 w-full rounded-lg border border-slate-300 px-3"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-        </label>
-        <label className="block">
-          <span className="mb-1 block text-sm font-medium">Password</span>
-          <input
-            required
-            type="password"
-            className="min-h-11 w-full rounded-lg border border-slate-300 px-3"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-        </label>
-        {error && <p className="text-sm text-rose-700">{error}</p>}
-        <button type="submit" className="min-h-11 w-full rounded-lg bg-slate-900 font-semibold text-white">
-          Sign in
-        </button>
-      </form>
+    <main className="relative -mx-4 -mt-5 min-h-[calc(100vh-4rem)] overflow-hidden md:rounded-2xl">
+      <Image
+        src="https://beffect.nz/cdn/shop/files/220612-Wanaka-Snow-023.jpg?v=1746667988&width=535"
+        alt="Wānaka landscape"
+        fill
+        priority
+        className="object-cover"
+      />
+      <div className="absolute inset-0 bg-[#131E29]/70" />
+
+      <section className="relative mx-auto flex min-h-[calc(100vh-4rem)] max-w-md flex-col items-center justify-center px-5 py-10 text-white">
+        <Image
+          src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSBoP9lJVpWKRC5cyFiUpJKiDXQlAfNbvUdBuQcybJr3g&s=10"
+          alt="b.effect Brewing"
+          width={180}
+          height={180}
+          className="mb-5 rounded-full border border-white/25 bg-white/5 p-2"
+        />
+        <h1 className="text-center text-3xl font-bold">Keg Tracker</h1>
+        <p className="mt-2 text-center text-sm text-slate-100">Sign in to start scanning and updating keg movements.</p>
+
+        <form className="mt-7 w-full space-y-4 rounded-2xl border border-white/25 bg-white/10 p-5 backdrop-blur-sm" onSubmit={onSubmit}>
+          <label className="block">
+            <span className="mb-1 block text-xs font-semibold tracking-[0.12em] text-slate-100">EMAIL</span>
+            <input
+              required
+              type="email"
+              className="min-h-12 w-full rounded-lg border border-white/40 bg-white px-3 text-slate-900"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-xs font-semibold tracking-[0.12em] text-slate-100">PASSWORD</span>
+            <input
+              required
+              type="password"
+              className="min-h-12 w-full rounded-lg border border-white/40 bg-white px-3 text-slate-900"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </label>
+          {error && <p className="text-sm text-rose-200">{error}</p>}
+          <button type="submit" className="min-h-12 w-full rounded-lg bg-[#131E29] font-semibold text-white">
+            Start Shift
+          </button>
+        </form>
+      </section>
     </main>
   );
 }

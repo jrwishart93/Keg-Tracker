@@ -1,12 +1,12 @@
 import type { KegStatus } from "@/types/keg";
 
 const statusClasses: Record<KegStatus, string> = {
-  filled: "bg-emerald-100 text-emerald-700",
-  delivered: "bg-sky-100 text-sky-700",
-  returned: "bg-indigo-100 text-indigo-700",
-  empty: "bg-amber-100 text-amber-700",
-  maintenance: "bg-violet-100 text-violet-700",
-  lost: "bg-rose-100 text-rose-700",
+  filled: "bg-emerald-100 text-emerald-800",
+  delivered: "bg-slate-100 text-slate-800",
+  returned: "bg-green-100 text-green-800",
+  empty: "bg-amber-100 text-amber-800",
+  maintenance: "bg-zinc-200 text-zinc-800",
+  lost: "bg-rose-100 text-rose-800",
 };
 
 export function StatusBadge({ status }: { status: KegStatus }) {

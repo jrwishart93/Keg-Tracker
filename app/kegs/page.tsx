@@ -8,7 +8,7 @@ export default async function KegsPage() {
 
   return (
     <main className="space-y-4">
-      <h1 className="text-3xl font-bold">Kegs</h1>
+      <h1 className="text-3xl font-bold text-[#131E29]">Kegs</h1>
       <div className="grid gap-3 md:grid-cols-2">
         {kegs.map((keg) => (
           <KegCard key={keg.id} keg={keg} />
