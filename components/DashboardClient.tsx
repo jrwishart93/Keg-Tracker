@@ -7,7 +7,7 @@ import { AlertTriangle, Beer, CircleOff, Droplets, RotateCcw, Settings2, Truck }
 import { FirebaseConnectionTestButton } from "@/components/FirebaseConnectionTestButton";
 import { MovementLog } from "@/components/MovementLog";
 import { useAuth } from "@/context/auth-context";
-import { getCustomerRequests, getRecentMovements } from "@/lib/firestore";
+import { getCustomerRequests, getKegs, getRecentMovements } from "@/lib/firestore";
 import { getFreshnessStatus } from "@/lib/freshness";
 import type { CustomerRequest } from "@/types/customer-request";
 import type { Keg } from "@/types/keg";
@@ -20,19 +20,53 @@ type DashboardFilters = {
 };
 
 export function DashboardClient({
-  initialKegs,
+  initialKegs = [],
   filters,
 }: {
-  initialKegs: Keg[];
+  initialKegs?: Keg[];
   filters: DashboardFilters;
 }) {
   const {
     state: { user, loading },
   } = useAuth();
+  const [kegs, setKegs] = useState<Keg[]>(initialKegs);
+  const [loadingKegs, setLoadingKegs] = useState(initialKegs.length === 0);
+  const [kegLoadError, setKegLoadError] = useState("");
   const [movements, setMovements] = useState<Movement[]>([]);
   const [customerRequests, setCustomerRequests] = useState<CustomerRequest[]>([]);
   const [loadingProtectedData, setLoadingProtectedData] = useState(true);
   const [protectedDataError, setProtectedDataError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadKegs() {
+      setLoadingKegs(true);
+      setKegLoadError("");
+
+      try {
+        const loadedKegs = await getKegs();
+        if (!cancelled) {
+          setKegs(loadedKegs);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setKegs([]);
+          setKegLoadError(error instanceof Error ? error.message : "Could not load keg records.");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingKegs(false);
+        }
+      }
+    }
+
+    void loadKegs();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -84,7 +118,7 @@ export function DashboardClient({
   const customer = filters.customer ?? "";
   const product = filters.product ?? "";
   const location = filters.location ?? "";
-  const filteredKegs = initialKegs.filter((keg) => {
+  const filteredKegs = kegs.filter((keg) => {
     if (customer && (keg.assignedCustomerId ?? "") !== customer) return false;
     if (product && (keg.productName ?? keg.beerName ?? keg.product ?? "") !== product) return false;
     if (location && (keg.currentLocation ?? "") !== location) return false;
@@ -121,9 +155,9 @@ export function DashboardClient({
     lost: AlertTriangle,
   };
 
-  const customers = [...new Set(initialKegs.map((keg) => keg.assignedCustomerId).filter(Boolean))];
-  const products = [...new Set(initialKegs.map((keg) => keg.productName ?? keg.beerName ?? keg.product).filter(Boolean))];
-  const locations = [...new Set(initialKegs.map((keg) => keg.currentLocation).filter(Boolean))];
+  const customers = [...new Set(kegs.map((keg) => keg.assignedCustomerId).filter(Boolean))];
+  const products = [...new Set(kegs.map((keg) => keg.productName ?? keg.beerName ?? keg.product).filter(Boolean))];
+  const locations = [...new Set(kegs.map((keg) => keg.currentLocation).filter(Boolean))];
   const showInternalData = Boolean(user && user.role !== "demo");
 
   return (
@@ -195,6 +229,12 @@ export function DashboardClient({
         </form>
       </section>
 
+      {kegLoadError ? (
+        <section className="rounded-[22px] border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-900">
+          Keg records could not be loaded from Firestore.
+        </section>
+      ) : null}
+
       {protectedDataError ? (
         <section className="rounded-[22px] border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-900">
           Internal dashboard data could not be loaded from Firestore. Public keg data is still available.
@@ -207,7 +247,11 @@ export function DashboardClient({
         </section>
       ) : null}
 
-      <section className="stagger-list grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      {loadingKegs ? (
+        <section className="rounded-[22px] border border-slate-200 bg-white/70 px-5 py-8 text-sm text-slate-500">Loading keg dashboard...</section>
+      ) : (
+        <>
+          <section className="stagger-list grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {[
           { key: "Near expiry", value: nearExpiryKegs.length, tone: "border-amber-200 bg-amber-50 text-amber-900" },
           { key: "Expired", value: expiredKegs.length, tone: "border-rose-200 bg-rose-50 text-rose-900" },
@@ -219,9 +263,9 @@ export function DashboardClient({
             <p className="mt-3 text-5xl font-semibold">{card.value}</p>
           </div>
         ))}
-      </section>
+          </section>
 
-      <section className="stagger-list grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <section className="stagger-list grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {Object.entries(counts).map(([key, value]) => {
           const Icon = statIcons[key as keyof typeof statIcons];
           return (
@@ -235,7 +279,9 @@ export function DashboardClient({
             </div>
           );
         })}
-      </section>
+          </section>
+        </>
+      )}
 
       <section className="grid gap-5 xl:grid-cols-[1.3fr_0.7fr]">
         <div className="space-y-4">
