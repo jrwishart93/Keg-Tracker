@@ -11,12 +11,31 @@ import {
   setDoc,
   updateDoc,
   where,
+  Timestamp,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import type { Keg } from "@/types/keg";
 import type { Location } from "@/types/location";
 import type { Movement } from "@/types/movement";
 import type { AppUser } from "@/types/user";
+
+
+interface UserDocument {
+  email: string;
+  displayName: string;
+  role: AppUser["role"];
+  requiresPasswordChange: boolean;
+  createdAt?: string;
+  lastLoginAt?: string;
+}
+
+function toIsoString(value: unknown): string | undefined {
+  if (!value) return undefined;
+  if (typeof value === "string") return value;
+  if (value instanceof Date) return value.toISOString();
+  if (value instanceof Timestamp) return value.toDate().toISOString();
+  return undefined;
+}
 
 export interface Product {
   id: string;
@@ -119,7 +138,29 @@ export async function getUserById(uid: string): Promise<AppUser | null> {
   const userRef = doc(db, "users", uid);
   const snap = await getDoc(userRef);
   if (!snap.exists()) return null;
-  return { uid: snap.id, ...(snap.data() as Omit<AppUser, "uid">) };
+
+  const raw = snap.data() as UserDocument;
+  return {
+    uid: snap.id,
+    email: raw.email,
+    displayName: raw.displayName,
+    role: raw.role,
+    requiresPasswordChange: Boolean(raw.requiresPasswordChange),
+    createdAt: toIsoString(raw.createdAt),
+    lastLoginAt: toIsoString(raw.lastLoginAt),
+  };
+}
+
+export async function updateUserLastLogin(uid: string) {
+  await updateDoc(doc(db, "users", uid), {
+    lastLoginAt: new Date().toISOString(),
+  });
+}
+
+export async function clearPasswordChangeRequirement(uid: string) {
+  await updateDoc(doc(db, "users", uid), {
+    requiresPasswordChange: false,
+  });
 }
 
 export async function getKegs(): Promise<Keg[]> {

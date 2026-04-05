@@ -9,20 +9,31 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
+    setLoading(true);
+
     try {
       const profile = await loginWithEmail(email, password);
       if (!profile) {
         setError("No staff profile found for this account.");
         return;
       }
+
+      if (profile.requiresPasswordChange) {
+        router.push("/change-password");
+        return;
+      }
+
       router.push("/dashboard");
     } catch {
       setError("Login failed. Check credentials and try again.");
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -57,6 +68,7 @@ export default function LoginPage() {
               className="min-h-12 w-full rounded-lg border border-white/40 bg-white px-3 text-slate-900"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              disabled={loading}
             />
           </label>
           <label className="block">
@@ -67,11 +79,16 @@ export default function LoginPage() {
               className="min-h-12 w-full rounded-lg border border-white/40 bg-white px-3 text-slate-900"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              disabled={loading}
             />
           </label>
           {error && <p className="text-sm text-rose-200">{error}</p>}
-          <button type="submit" className="min-h-12 w-full rounded-lg bg-[#131E29] font-semibold text-white">
-            Start Shift
+          <button
+            type="submit"
+            disabled={loading}
+            className="min-h-12 w-full rounded-lg bg-[#131E29] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-75"
+          >
+            {loading ? "Signing in..." : "Start Shift"}
           </button>
         </form>
       </section>

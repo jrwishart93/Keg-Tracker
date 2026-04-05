@@ -17,6 +17,39 @@ Initial implementation of the Keg Tracker app using Next.js App Router, TypeScri
    npm run dev
    ```
 
+## Demo auth flow (Firebase Auth + Firestore)
+
+This prototype uses Firebase Authentication (email/password) and Firestore user profile documents (`users/{uid}`).
+
+### Seed demo users
+
+1. Ensure you can authenticate with Firebase Admin SDK locally.
+   - Recommended: set `GOOGLE_APPLICATION_CREDENTIALS` to a service account JSON file with Auth + Firestore access.
+   - Alternative: set `FIREBASE_SERVICE_ACCOUNT_PATH` to a JSON file path.
+2. Run:
+   ```bash
+   npm run seed:demo-users
+   ```
+
+The script creates/updates these Firebase Auth users and matching Firestore `users` documents:
+
+- `admin@beffect.local` / `Admin1234!` / role `admin` / `requiresPasswordChange: false`
+- `ahughes@beffect.local` / `Password123!` / role `staff` / `requiresPasswordChange: true`
+- `dev@beffect.local` / `Password123!` / role `developer` / `requiresPasswordChange: true`
+
+### Test the login flow
+
+1. Visit `/login` and sign in with one of the seeded users.
+2. If `requiresPasswordChange` is true, you will be redirected to `/change-password` and must update the password before app access.
+3. After password update, the app sets `requiresPasswordChange` to `false` in Firestore and redirects to `/dashboard`.
+4. Use the header **Logout** button to sign out.
+
+### Route behavior
+
+- Unauthenticated users are redirected to `/login`.
+- Authenticated users with `requiresPasswordChange: true` are forced to `/change-password` until completed.
+- `/admin` is currently role-gated for `admin` users.
+
 ## Current scope
 
 This build includes:

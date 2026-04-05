@@ -1,8 +1,11 @@
-export type UserRole = "admin" | "staff";
+export type UserRole = "admin" | "staff" | "developer";
 
 export interface AppUser {
   uid: string;
-  name: string;
   email: string;
+  displayName: string;
   role: UserRole;
+  requiresPasswordChange: boolean;
+  createdAt?: string;
+  lastLoginAt?: string;
 }

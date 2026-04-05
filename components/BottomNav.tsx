@@ -10,8 +10,14 @@ const links = [
   { href: "/locations", label: "Locations" },
 ];
 
+const hiddenRoutes = new Set(["/login", "/change-password"]);
+
 export function BottomNav() {
   const pathname = usePathname();
+
+  if (hiddenRoutes.has(pathname)) {
+    return null;
+  }
 
   return (
     <nav className="fixed inset-x-0 bottom-0 border-t border-white/10 bg-[#131E29]/95 p-2 backdrop-blur md:hidden">
