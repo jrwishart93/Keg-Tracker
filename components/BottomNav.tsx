@@ -10,7 +10,7 @@ const links = [
   { href: "/locations", label: "Locations" },
 ];
 
-const hiddenRoutes = new Set(["/login", "/change-password"]);
+const hiddenRoutes = new Set(["/", "/login", "/change-password"]);
 
 export function BottomNav() {
   const pathname = usePathname();

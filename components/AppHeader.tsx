@@ -4,7 +4,7 @@ import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/context/auth-context";
 
-const AUTH_ROUTES = new Set(["/login", "/change-password"]);
+const AUTH_ROUTES = new Set(["/", "/login", "/change-password"]);
 
 export function AppHeader() {
   const pathname = usePathname();
@@ -15,10 +15,11 @@ export function AppHeader() {
   } = useAuth();
 
   const isAuthRoute = AUTH_ROUTES.has(pathname);
+  const isDemoUser = user?.role === "demo";
 
   async function onLogout() {
     await signOut();
-    router.push("/login");
+    router.push("/");
   }
 
   return (
@@ -36,6 +37,11 @@ export function AppHeader() {
             <p className="text-sm font-bold tracking-wide">b.effect</p>
             <p className="text-xs text-slate-300">Keg Tracker</p>
           </div>
+          {isDemoUser && (
+            <span className="rounded-full border border-amber-300/60 bg-amber-200/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-amber-100">
+              Demo Mode
+            </span>
+          )}
         </div>
 
         {!isAuthRoute && user && (

@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useMemo, useReducer, type Dispatch, type ReactNode } from "react";
 import { logout, watchAuthState } from "@/lib/auth";
+import { DEMO_USER, disableDemoMode, isDemoModeEnabled } from "@/lib/demo-mode";
 import type { AppUser } from "@/types/user";
 
 type AuthState = {
@@ -40,7 +41,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const unsubscribe = watchAuthState((user) => {
-      dispatch({ type: "SET_USER", payload: user });
+      if (user) {
+        dispatch({ type: "SET_USER", payload: user });
+        return;
+      }
+
+      // TEMPORARY: allow a client-only demo identity when no Firebase user is authenticated.
+      if (isDemoModeEnabled()) {
+        dispatch({ type: "SET_USER", payload: DEMO_USER });
+        return;
+      }
+
+      dispatch({ type: "SET_USER", payload: null });
     });
 
     return () => unsubscribe();
@@ -50,7 +62,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => ({
       state,
       dispatch,
-      signOut: logout,
+      signOut: async () => {
+        disableDemoMode();
+        await logout();
+      },
     }),
     [state],
   );
