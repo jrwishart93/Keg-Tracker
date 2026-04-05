@@ -70,7 +70,6 @@ export default function KegActionPage({ params }: { params: Promise<{ id: string
   }, [id]);
 
   const selectedActionLabel = useMemo(() => KEG_SCAN_LABELS[selectedAction], [selectedAction]);
-  const isDemoUser = Boolean(user?.role === "demo");
 
   return (
     <main className="page-shell space-y-5">
@@ -124,9 +123,9 @@ export default function KegActionPage({ params }: { params: Promise<{ id: string
         <section className="rounded-[22px] border border-slate-200 bg-white/70 px-5 py-6 text-sm text-slate-500">Loading keg and scan controls...</section>
       ) : !keg ? null : authLoading ? (
         <section className="rounded-[22px] border border-slate-200 bg-white/70 px-5 py-6 text-sm text-slate-500">Restoring staff access...</section>
-      ) : isDemoUser || !user ? (
+      ) : !user ? (
         <section className="rounded-[22px] border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-900">
-          Demo mode can view scan actions, but only staff accounts can write keg events to Firestore.
+          Sign in to save scan actions for this keg.
         </section>
       ) : (
         <section className="editorial-panel p-5 sm:p-6">

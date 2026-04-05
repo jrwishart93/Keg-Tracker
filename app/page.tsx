@@ -1,15 +1,10 @@
 "use client";
 
 import Image from "next/image";
-import { startTransition } from "react";
-import { enableDemoMode } from "@/lib/demo-mode";
 
 export default function WelcomePage() {
-  function onTryDemo() {
-    enableDemoMode();
-    startTransition(() => {
-      window.location.href = "/demo";
-    });
+  function onCreateAccount() {
+    window.location.href = "/login?mode=signup";
   }
 
   return (
@@ -28,7 +23,7 @@ export default function WelcomePage() {
         <div className="float-in editorial-panel editorial-panel--dark grain-overlay max-w-3xl p-7 sm:p-10">
           <div className="flex items-center gap-4">
             <Image
-              src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSBoP9lJVpWKRC5cyFiUpJKiDXQlAfNbvUdBuQcybJr3g&s=10"
+              src="/logo.jpg"
               alt="b.effect Brewing"
               width={88}
               height={88}
@@ -64,10 +59,10 @@ export default function WelcomePage() {
           <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
             <button
               type="button"
-              onClick={onTryDemo}
+              onClick={onCreateAccount}
               className="glow-button min-h-13 rounded-full bg-[linear-gradient(135deg,#e6b677,#be7c38)] px-6 font-semibold text-white"
             >
-              Launch Demo
+              Create Account
             </button>
             <button
               type="button"
@@ -76,7 +71,7 @@ export default function WelcomePage() {
               }}
               className="min-h-13 rounded-full border border-white/20 bg-white/10 px-6 font-semibold text-white hover:bg-white/16"
             >
-              Sign In Or Create Account
+              Sign In
             </button>
             <button
               type="button"

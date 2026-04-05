@@ -52,7 +52,7 @@ export function KegLabelClient({ kegId }: { kegId: string }) {
     return (
       <main className="space-y-4 print:bg-white">
         <div className="rounded-[22px] border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-900">
-          Keg label data could not be loaded from Firestore.
+          Could not load keg label data.
         </div>
       </main>
     );

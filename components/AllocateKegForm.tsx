@@ -168,7 +168,7 @@ export function AllocateKegForm() {
 
       setCreatedKeg(created);
       await refreshReferenceData();
-      setSuccessMessage(`Allocated ${created.kegId} and saved its QR payload to Firebase.`);
+      setSuccessMessage(`Allocated ${created.kegId} and saved its QR payload.`);
       setForm((current) => ({
         ...current,
         product: "",

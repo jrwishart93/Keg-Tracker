@@ -4,10 +4,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AlertTriangle, Beer, CircleOff, Droplets, RotateCcw, Settings2, Truck } from "lucide-react";
-import { FirebaseConnectionTestButton } from "@/components/FirebaseConnectionTestButton";
 import { MovementLog } from "@/components/MovementLog";
 import { useAuth } from "@/context/auth-context";
-import { getCustomerRequests, getKegs, getRecentMovements } from "@/lib/firestore";
+import { getCustomerRequests, getKegs, getRecentMovements, seedCoreData } from "@/lib/firestore";
 import { getFreshnessStatus } from "@/lib/freshness";
 import type { CustomerRequest } from "@/types/customer-request";
 import type { Keg } from "@/types/keg";
@@ -45,6 +44,7 @@ export function DashboardClient({
       setKegLoadError("");
 
       try {
+        await seedCoreData();
         const loadedKegs = await getKegs();
         if (!cancelled) {
           setKegs(loadedKegs);
@@ -76,7 +76,7 @@ export function DashboardClient({
         return;
       }
 
-      if (!user || user.role === "demo") {
+      if (!user) {
         if (!cancelled) {
           setMovements([]);
           setCustomerRequests([]);
@@ -158,7 +158,7 @@ export function DashboardClient({
   const customers = [...new Set(kegs.map((keg) => keg.assignedCustomerId).filter(Boolean))];
   const products = [...new Set(kegs.map((keg) => keg.productName ?? keg.beerName ?? keg.product).filter(Boolean))];
   const locations = [...new Set(kegs.map((keg) => keg.currentLocation).filter(Boolean))];
-  const showInternalData = Boolean(user && user.role !== "demo");
+  const showInternalData = Boolean(user);
 
   return (
     <main className="page-shell space-y-6">
@@ -231,19 +231,13 @@ export function DashboardClient({
 
       {kegLoadError ? (
         <section className="rounded-[22px] border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-900">
-          Keg records could not be loaded from Firestore.
+          Could not load keg records.
         </section>
       ) : null}
 
       {protectedDataError ? (
         <section className="rounded-[22px] border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-900">
-          Internal dashboard data could not be loaded from Firestore. Public keg data is still available.
-        </section>
-      ) : null}
-
-      {!showInternalData && !loading ? (
-        <section className="rounded-[22px] border border-slate-200 bg-white/70 px-5 py-4 text-sm text-slate-700">
-          Demo mode shows public keg data only. Sign in with a staff account to view internal movement history, customer requests, and location records.
+          Could not load movement history or customer requests.
         </section>
       ) : null}
 
@@ -341,12 +335,11 @@ export function DashboardClient({
           </section>
 
           <section className="editorial-panel p-5 sm:p-6">
-            <p className="section-kicker">System Health</p>
-            <h2 className="mt-2 text-3xl font-semibold text-[color:var(--ink)]">Firebase connection check</h2>
+            <p className="section-kicker">Fleet Snapshot</p>
+            <h2 className="mt-2 text-3xl font-semibold text-[color:var(--ink)]">Operational focus</h2>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
-              Use this temporary control to confirm live Firestore access while the prototype is being refined.
+              Use the filters above to review freshness risk, recent movement, and active customer demand across the current keg set.
             </p>
-            <FirebaseConnectionTestButton />
           </section>
         </div>
       </section>

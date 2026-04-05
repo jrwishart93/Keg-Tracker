@@ -2,7 +2,7 @@
 
 import QRCode from "qrcode";
 
-const BRAND_LOGO_PATH = "/api/branding/logo";
+const BRAND_LOGO_PATH = "/logo.jpg";
 
 function loadLogo(src: string) {
   return new Promise<HTMLImageElement>((resolve, reject) => {

@@ -1,19 +1,17 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const PUBLIC_ROUTES = new Set(["/", "/login", "/demo"]);
+const PUBLIC_ROUTES = new Set(["/", "/login"]);
 PUBLIC_ROUTES.add("/how-it-works");
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  if (pathname.startsWith("/_next") || pathname === "/favicon.ico" || pathname.startsWith("/api/branding/logo")) {
+  if (pathname.startsWith("/_next") || pathname === "/favicon.ico" || /\.[a-z0-9]+$/i.test(pathname)) {
     return NextResponse.next();
   }
 
-  const isAuthenticated = Boolean(request.cookies.get("kt_session")?.value);
-  const isDemoMode = request.cookies.get("kt_demo")?.value === "1";
-  const hasAccess = isAuthenticated || isDemoMode;
+  const hasAccess = Boolean(request.cookies.get("kt_session")?.value);
   const role = request.cookies.get("kt_role")?.value;
 
   const isPublicRoute = PUBLIC_ROUTES.has(pathname) || pathname.startsWith("/keg/");

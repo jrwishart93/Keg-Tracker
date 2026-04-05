@@ -10,7 +10,6 @@ import {
   type User,
 } from "firebase/auth";
 import { auth } from "@/lib/firebase";
-import { disableDemoMode } from "@/lib/demo-mode";
 import { getUserById, updateUserLastLogin, upsertUserProfile } from "@/lib/firestore";
 import type { AppUser, UserRole } from "@/types/user";
 
@@ -31,6 +30,7 @@ function clearCookie(name: string) {
 
 // Session cookies are used by proxy.ts to gate routes without storing credentials in the client.
 function setSessionCookies(profile: AppUser) {
+  clearCookie("kt_demo");
   setCookie("kt_session", "1");
   setCookie("kt_role", profile.role);
 }
@@ -38,6 +38,7 @@ function setSessionCookies(profile: AppUser) {
 function clearSessionCookies() {
   clearCookie("kt_session");
   clearCookie("kt_role");
+  clearCookie("kt_demo");
 }
 
 function getFallbackDisplayName(user: User, preferredDisplayName?: string) {
@@ -74,7 +75,6 @@ async function bootstrapProfile(user: User, preferredDisplayName?: string): Prom
     throw new Error("No staff profile found for this account.");
   }
 
-  disableDemoMode();
   await updateUserLastLogin(user.uid);
   const updatedProfile = { ...profile, lastLoginAt: new Date().toISOString() };
   setSessionCookies(updatedProfile);
@@ -119,7 +119,6 @@ export async function logout() {
   }
 
   clearSessionCookies();
-  disableDemoMode();
 }
 
 export function watchAuthState(callback: (user: AppUser | null) => void) {

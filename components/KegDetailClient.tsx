@@ -17,7 +17,7 @@ export function KegDetailClient({ keg }: { keg: Keg }) {
   const [events, setEvents] = useState<KegEvent[]>([]);
   const [loadingEvents, setLoadingEvents] = useState(true);
   const [historyError, setHistoryError] = useState("");
-  const showInternalData = Boolean(user && user.role !== "demo");
+  const showInternalData = Boolean(user);
 
   useEffect(() => {
     let cancelled = false;
@@ -177,16 +177,6 @@ export function KegDetailClient({ keg }: { keg: Keg }) {
         </Link>
       </div>
 
-      {loading ? (
-        <section className="rounded-[22px] border border-slate-200 bg-white/70 px-5 py-4 text-sm text-slate-500">
-          Restoring staff access...
-        </section>
-      ) : !showInternalData ? (
-        <section className="rounded-[22px] border border-slate-200 bg-white/70 px-5 py-4 text-sm text-slate-700">
-          Demo mode shows the keg record only. Sign in with a staff account to update scan events and view the keg audit trail.
-        </section>
-      ) : null}
-
       <section className="space-y-4">
         <div>
           <p className="section-kicker">History</p>
@@ -194,7 +184,7 @@ export function KegDetailClient({ keg }: { keg: Keg }) {
         </div>
         {historyError ? (
           <div className="rounded-[22px] border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-900">
-            Event history could not be loaded from Firestore.
+            Could not load event history.
           </div>
         ) : null}
         {loading ? (

@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { loginWithEmail, signInWithApple, signInWithGoogle, signUpWithEmail } from "@/lib/auth";
 
@@ -47,6 +47,12 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
   const router = useRouter();
+
+  useEffect(() => {
+    const requestedMode = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("mode") : null;
+    setMode(requestedMode === "signup" ? "signup" : "signin");
+    setError(null);
+  }, []);
 
   async function finalizeAuth(action: Promise<unknown>) {
     setError(null);
@@ -99,7 +105,7 @@ export default function LoginPage() {
             </div>
             <div className="rounded-[24px] border border-white/10 bg-[rgba(255,255,255,0.08)] p-5">
               <p className="eyebrow text-[10px] text-amber-100/78">Shared Visibility</p>
-              <p className="mt-2 text-sm leading-6 text-slate-100/84">Every account gets a live Firestore profile and a clear route into the same operational system.</p>
+              <p className="mt-2 text-sm leading-6 text-slate-100/84">Every account opens the same live workspace for scanning, allocations, and keg operations.</p>
             </div>
           </div>
         </div>
@@ -107,7 +113,7 @@ export default function LoginPage() {
         <div className="float-in editorial-panel border-white/10 bg-[rgba(255,248,239,0.92)] p-5 text-slate-900 shadow-[0_24px_48px_rgba(0,0,0,0.22)] sm:p-7">
           <div className="mb-6 flex items-center gap-4">
             <Image
-              src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSBoP9lJVpWKRC5cyFiUpJKiDXQlAfNbvUdBuQcybJr3g&s=10"
+              src="/logo.jpg"
               alt="b.effect Brewing"
               width={70}
               height={70}

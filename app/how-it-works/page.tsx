@@ -61,16 +61,16 @@ const qrBenefits = [
 ];
 
 const futureFeatures = [
-  "Secure user accounts and login",
-  "Role-based access for staff, admin, and managers",
+  "Expanded role controls for staff, admin, and managers",
   "Full mobile scanning workflow",
   "Desktop dashboard with reporting",
+  "Automated alerts and notifications",
   "Complete tracking across all locations",
 ];
 
-const demoBenefits = [
-  "Test the scanning flow",
-  "Navigate the system",
+const currentBuildBenefits = [
+  "Create an account and explore the workflow",
+  "Navigate the current operational screens",
   "Understand how movements are recorded",
 ];
 
@@ -112,7 +112,7 @@ export default function HowItWorksPage() {
               Back To Welcome
             </Link>
             <Link href="/login" className="inline-flex min-h-12 items-center rounded-full border border-white/30 px-5 font-semibold text-white">
-              Staff Login
+              Sign In
             </Link>
           </div>
         </div>
@@ -219,13 +219,13 @@ export default function HowItWorksPage() {
       </SectionCard>
 
       <section className="editorial-panel editorial-panel--dark p-6 text-white shadow-sm">
-        <p className="eyebrow text-slate-300">Try The Demo</p>
+        <p className="eyebrow text-slate-300">Try The Current Build</p>
         <h2 className="mt-3 text-4xl font-semibold">Explore the workflow before full deployment.</h2>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-100">
-          You can explore how the system works using demo mode. It is a preview of how the live product will function once fully deployed.
+          You can create an account and explore the current prototype. It is a preview of how the live product will function once fully deployed.
         </p>
         <ul className="mt-5 grid gap-3 sm:grid-cols-3">
-          {demoBenefits.map((item) => (
+          {currentBuildBenefits.map((item) => (
             <li key={item} className="rounded-[18px] border border-white/10 bg-[rgba(255,255,255,0.08)] px-4 py-3 text-sm text-slate-100">
               {item}
             </li>
@@ -235,8 +235,8 @@ export default function HowItWorksPage() {
           <Link href="/" className="glow-button inline-flex min-h-12 items-center rounded-full bg-white px-5 font-semibold text-[#131E29]">
             Go To Welcome Screen
           </Link>
-          <Link href="/login" className="inline-flex min-h-12 items-center rounded-full border border-white/30 px-5 font-semibold text-white">
-            Login Instead
+          <Link href="/login?mode=signup" className="inline-flex min-h-12 items-center rounded-full border border-white/30 px-5 font-semibold text-white">
+            Create Account
           </Link>
         </div>
       </section>
