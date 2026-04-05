@@ -1,4 +1,16 @@
-export type KegStatus = "empty" | "washed" | "filled" | "delivered" | "returned" | "maintenance" | "lost";
+export type KegStatus =
+  | "Available"
+  | "Checked In"
+  | "Checked Out"
+  | "Delivered"
+  | "Empty"
+  | "Filled"
+  | "In Maintenance"
+  | "Lost"
+  | "Palletized"
+  | "Ready for Pickup"
+  | "Returned"
+  | "Washed";
 
 export interface Keg {
   id: string;
@@ -6,14 +18,29 @@ export interface Keg {
   name?: string;
   qrCode: string;
   currentStatus: KegStatus;
-  status?: KegStatus;
+  status?: string | null;
   washedAt?: string | null;
   filledAt?: string | null;
   bestBefore?: string | null;
   productName?: string | null;
   batchNumber?: string | null;
-  currentLocation: string;
-  intendedLocation?: string;
+  currentLocation: string | null;
+  intendedLocation?: string | null;
+  returnLocation?: string | null;
+  serialNumber?: string | null;
+  assetNumber?: string | null;
+  ownerName?: string | null;
+  leaseName?: string | null;
+  dateOfManufacture?: string | null;
+  inMaintenance?: boolean;
+  isLost?: boolean;
+  lastWashAt?: string | null;
+  lastFillAt?: string | null;
+  readyForPickupAt?: string | null;
+  palletizedAt?: string | null;
+  checkedInAt?: string | null;
+  checkedOutAt?: string | null;
+  updatedAt?: string | null;
   assignedCustomerId?: string | null;
   product?: string;
   batch?: string;

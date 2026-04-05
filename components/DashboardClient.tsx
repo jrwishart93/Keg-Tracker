@@ -97,16 +97,17 @@ export function DashboardClient({
   const nearExpiryKegs = filteredKegs.filter((keg) => getFreshnessStatus(keg.bestBefore ?? keg.bestBeforeDate) === "near-expiry");
   const expiredKegs = filteredKegs.filter((keg) => getFreshnessStatus(keg.bestBefore ?? keg.bestBeforeDate) === "expired");
   const pendingCustomerRequests = filteredCustomerRequests.filter((request) => request.status === "pending");
+  const hasStatus = (keg: Keg, ...statuses: string[]) => statuses.includes(keg.currentStatus);
 
   const counts = {
     total: filteredKegs.length,
-    washed: filteredKegs.filter((keg) => keg.currentStatus === "washed").length,
-    filled: filteredKegs.filter((keg) => keg.currentStatus === "filled").length,
-    delivered: filteredKegs.filter((keg) => keg.currentStatus === "delivered").length,
-    returned: filteredKegs.filter((keg) => keg.currentStatus === "returned").length,
-    empty: filteredKegs.filter((keg) => keg.currentStatus === "empty").length,
-    maintenance: filteredKegs.filter((keg) => keg.currentStatus === "maintenance").length,
-    lost: filteredKegs.filter((keg) => keg.currentStatus === "lost").length,
+    washed: filteredKegs.filter((keg) => hasStatus(keg, "Washed")).length,
+    filled: filteredKegs.filter((keg) => hasStatus(keg, "Filled")).length,
+    delivered: filteredKegs.filter((keg) => hasStatus(keg, "Checked Out", "Delivered")).length,
+    returned: filteredKegs.filter((keg) => hasStatus(keg, "Checked In", "Returned")).length,
+    empty: filteredKegs.filter((keg) => hasStatus(keg, "Empty", "Available")).length,
+    maintenance: filteredKegs.filter((keg) => hasStatus(keg, "In Maintenance")).length,
+    lost: filteredKegs.filter((keg) => hasStatus(keg, "Lost")).length,
   };
 
   const statIcons = {

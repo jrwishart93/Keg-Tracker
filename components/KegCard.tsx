@@ -29,7 +29,7 @@ export function KegCard({ keg }: { keg: Keg }) {
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         <div>
           <p className="section-kicker">Current Location</p>
-          <p className="mt-2 text-sm font-medium text-slate-800">{keg.currentLocation}</p>
+          <p className="mt-2 text-sm font-medium text-slate-800">{keg.currentLocation ?? "Unknown"}</p>
         </div>
         <div>
           <p className="section-kicker">Intended Location</p>

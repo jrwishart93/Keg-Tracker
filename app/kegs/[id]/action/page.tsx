@@ -1,223 +1,169 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { use, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ActionForm } from "@/components/ActionForm";
 import { useAuth } from "@/context/auth-context";
-import { createMovement, getKegById, getLocations, getProducts, seedCoreData, updateKeg } from "@/lib/firestore";
+import { getKegById, getLocations, getProducts, recordKegScanEvent, seedCoreData } from "@/lib/firestore";
+import { KEG_SCAN_LABELS, KEG_SCAN_TYPES } from "@/types/keg-event";
+import type { KegScanType } from "@/types/keg-event";
 import type { Keg } from "@/types/keg";
-import type { KegStatus } from "@/types/keg";
-import type { StaffMovementAction } from "@/types/movement";
 
-const actions: StaffMovementAction[] = ["wash", "fill", "deliver", "return", "empty", "maintenance", "lost"];
-
-const actionToStatus: Record<StaffMovementAction, KegStatus> = {
-  wash: "washed",
-  fill: "filled",
-  deliver: "delivered",
-  return: "returned",
-  empty: "empty",
-  maintenance: "maintenance",
-  lost: "lost",
-};
-
-const actionLabels: Record<StaffMovementAction, string> = {
-  wash: "Wash",
-  fill: "Fill",
-  deliver: "Deliver",
-  return: "Return",
-  empty: "Empty",
-  maintenance: "Maintenance",
-  lost: "Lost",
-};
-
-export default function KegActionPage({ params }: { params: { id: string } }) {
-  const [selectedAction, setSelectedAction] = useState<StaffMovementAction>("fill");
+export default function KegActionPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
+  const [selectedAction, setSelectedAction] = useState<KegScanType>("CHECK_IN");
   const [loading, setLoading] = useState(false);
+  const [loadingData, setLoadingData] = useState(true);
+  const [error, setError] = useState("");
   const [keg, setKeg] = useState<Keg | null>(null);
   const [locationNames, setLocationNames] = useState<string[]>(["Brewery", "b.social / Tap Room"]);
   const [products, setProducts] = useState<{ id: string; name: string; abv: number }[]>([]);
   const {
-    state: { user },
+    state: { user, loading: authLoading },
   } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
+    let cancelled = false;
+
     async function loadReferenceData() {
-      await seedCoreData();
-      const [locations, loadedProducts, loadedKeg] = await Promise.all([getLocations(), getProducts(), getKegById(params.id)]);
-      if (locations.length > 0) {
-        setLocationNames(Array.from(new Set(locations.map((location) => location.name))));
+      setLoadingData(true);
+      setError("");
+
+      try {
+        await seedCoreData();
+        const [locations, loadedProducts, loadedKeg] = await Promise.all([getLocations(), getProducts(), getKegById(id)]);
+
+        if (cancelled) {
+          return;
+        }
+
+        if (!loadedKeg) {
+          setError("Keg not found.");
+          setKeg(null);
+          return;
+        }
+
+        if (locations.length > 0) {
+          setLocationNames(Array.from(new Set(locations.map((location) => location.name))));
+        }
+
+        setProducts(loadedProducts);
+        setKeg(loadedKeg);
+      } catch (loadError) {
+        if (!cancelled) {
+          setError(loadError instanceof Error ? loadError.message : "Could not load keg action data.");
+          setKeg(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingData(false);
+        }
       }
-      setProducts(loadedProducts);
-      setKeg(loadedKeg);
     }
 
     void loadReferenceData();
-  }, [params.id]);
 
-  const selectedActionLabel = useMemo(() => actionLabels[selectedAction], [selectedAction]);
-
-  function getNextCurrentLocation(fields: Record<string, string>) {
-    if (selectedAction === "deliver" || selectedAction === "return") {
-      return fields.nextLocation ?? fields.currentLocation ?? keg?.currentLocation ?? "Brewery";
-    }
-
-    return fields.currentLocation ?? fields.lastKnownLocation ?? keg?.currentLocation ?? "Brewery";
-  }
-
-  function getNextIntendedLocation(fields: Record<string, string>) {
-    if (selectedAction === "deliver" || selectedAction === "return") {
-      return fields.nextLocation ?? keg?.intendedLocation;
-    }
-
-    return keg?.intendedLocation;
-  }
-
-  function buildKegPatch(fields: Record<string, string>, now: string): Record<string, unknown> {
-    if (selectedAction === "wash") {
-      return {
-        currentLocation: getNextCurrentLocation(fields),
-        currentStatus: "washed",
-        status: "washed",
-        washedAt: now,
-        filledAt: null,
-        bestBefore: null,
-        productName: null,
-        batchNumber: null,
-        assignedCustomerId: null,
-        product: null,
-        beerName: null,
-        batch: null,
-        packagingDate: null,
-        bestBeforeDate: null,
-        lastUpdatedAt: now,
-        lastUpdated: now,
-      };
-    }
-
-    if (selectedAction === "fill") {
-      const productName = fields.product || fields.beerName || keg?.productName || keg?.product;
-      const batchNumber = fields.batch || keg?.batchNumber || keg?.batch;
-      const bestBefore = fields.bestBeforeDate || keg?.bestBefore || keg?.bestBeforeDate;
-
-      return {
-        currentLocation: getNextCurrentLocation(fields),
-        intendedLocation: getNextIntendedLocation(fields),
-        currentStatus: "filled",
-        status: "filled",
-        filledAt: now,
-        bestBefore: bestBefore || null,
-        productName: productName || null,
-        batchNumber: batchNumber || null,
-        product: productName,
-        beerName: productName,
-        batch: batchNumber,
-        abv: fields.abv ? Number(fields.abv) : keg?.abv,
-        packagingDate: fields.packagingDate || now,
-        bestBeforeDate: bestBefore,
-        lastUpdatedAt: now,
-        lastUpdated: now,
-      };
-    }
-
-    if (selectedAction === "deliver") {
-      return {
-        currentLocation: getNextCurrentLocation(fields),
-        intendedLocation: getNextIntendedLocation(fields),
-        currentStatus: "delivered",
-        status: "delivered",
-        assignedCustomerId: fields.customerName || keg?.assignedCustomerId || null,
-        productName: keg?.productName ?? keg?.product ?? null,
-        batchNumber: keg?.batchNumber ?? keg?.batch ?? null,
-        lastUpdatedAt: now,
-        lastUpdated: now,
-      };
-    }
-
-    if (selectedAction === "return") {
-      return {
-        currentLocation: getNextCurrentLocation(fields),
-        intendedLocation: getNextIntendedLocation(fields),
-        currentStatus: "returned",
-        status: "returned",
-        assignedCustomerId: null,
-        lastUpdatedAt: now,
-        lastUpdated: now,
-      };
-    }
-
-    return {
-      currentLocation: getNextCurrentLocation(fields),
-      intendedLocation: getNextIntendedLocation(fields),
-      currentStatus: actionToStatus[selectedAction],
-      status: actionToStatus[selectedAction],
-      productName: keg?.productName ?? keg?.product ?? null,
-      batchNumber: keg?.batchNumber ?? keg?.batch ?? null,
-      product: fields.product ?? keg?.product,
-      batch: fields.batch ?? keg?.batch,
-      beerName: fields.beerName ?? keg?.beerName,
-      abv: fields.abv ? Number(fields.abv) : keg?.abv,
-      packagingDate: fields.packagingDate ?? keg?.packagingDate,
-      bestBeforeDate: fields.bestBeforeDate ?? keg?.bestBeforeDate,
-      bestBefore: fields.bestBeforeDate ?? keg?.bestBefore ?? keg?.bestBeforeDate ?? null,
-      lastUpdatedAt: now,
-      lastUpdated: now,
+    return () => {
+      cancelled = true;
     };
-  }
+  }, [id]);
+
+  const selectedActionLabel = useMemo(() => KEG_SCAN_LABELS[selectedAction], [selectedAction]);
+  const isDemoUser = Boolean(user?.role === "demo");
 
   return (
     <main className="page-shell space-y-5">
       <section className="editorial-panel p-5 sm:p-6">
         <p className="section-kicker">Scan Action</p>
-        <h1 className="mt-3 text-5xl font-semibold text-[color:var(--ink)]">Update Keg</h1>
-        <p className="mt-3 text-sm leading-7 text-slate-600">Choose the movement type, capture the key details, and save the keg’s next operational state.</p>
+        <h1 className="mt-3 text-5xl font-semibold text-[color:var(--ink)]">Record Keg Event</h1>
+        <p className="mt-3 text-sm leading-7 text-slate-600">
+          Choose one of the supported scan types and save it directly onto this keg&apos;s live record and audit history.
+        </p>
       </section>
+
+      {keg ? (
+        <section className="editorial-panel p-5 sm:p-6">
+          <p className="section-kicker">Selected Keg</p>
+          <div className="mt-3 grid gap-4 md:grid-cols-3">
+            <div>
+              <p className="section-kicker">Keg</p>
+              <p className="mt-2 text-xl font-semibold text-[color:var(--ink)]">{keg.kegId ?? keg.id}</p>
+            </div>
+            <div>
+              <p className="section-kicker">Current Status</p>
+              <p className="mt-2 text-sm font-medium text-slate-800">{keg.currentStatus}</p>
+            </div>
+            <div>
+              <p className="section-kicker">Current Location</p>
+              <p className="mt-2 text-sm font-medium text-slate-800">{keg.currentLocation ?? "Unknown"}</p>
+            </div>
+          </div>
+        </section>
+      ) : null}
+
       <label className="editorial-panel block p-5">
         <span className="section-kicker">Scan Type</span>
         <select
           value={selectedAction}
-          onChange={(event) => setSelectedAction(event.target.value as StaffMovementAction)}
+          onChange={(event) => setSelectedAction(event.target.value as KegScanType)}
           className="field-shell mt-2 min-h-12 w-full rounded-[18px] px-4"
+          disabled={loadingData || Boolean(error)}
         >
-          {actions.map((action) => (
+          {KEG_SCAN_TYPES.map((action) => (
             <option key={action} value={action}>
-              {actionLabels[action]}
+              {KEG_SCAN_LABELS[action]}
             </option>
           ))}
         </select>
       </label>
-      <section className="editorial-panel p-5 sm:p-6">
-        <ActionForm
-          key={selectedAction}
-          actionType={selectedAction}
-          locations={locationNames}
-          products={products}
-          onSubmit={async (fields) => {
-            setLoading(true);
 
-            const now = new Date().toISOString();
-            await updateKeg(params.id, buildKegPatch(fields, now));
+      {error ? <p className="rounded-[18px] border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p> : null}
 
-            await createMovement({
-              kegId: keg?.kegId ?? params.id,
-              scanType: selectedAction,
-              type: selectedAction === "deliver" ? "delivery" : selectedAction,
-              fromLocation: fields.currentLocation,
-              toLocation: fields.nextLocation,
-              product: fields.product ?? fields.beerName ?? keg?.productName ?? keg?.product,
-              batch: fields.batch,
-              timestamp: now,
-              userId: user?.uid ?? "current-user",
-              notes: JSON.stringify({ ...fields, scanType: selectedActionLabel }),
-              updatedBy: user?.displayName ?? user?.email ?? "current-user",
-            });
+      {loadingData ? (
+        <section className="rounded-[22px] border border-slate-200 bg-white/70 px-5 py-6 text-sm text-slate-500">Loading keg and scan controls...</section>
+      ) : !keg ? null : authLoading ? (
+        <section className="rounded-[22px] border border-slate-200 bg-white/70 px-5 py-6 text-sm text-slate-500">Restoring staff access...</section>
+      ) : isDemoUser || !user ? (
+        <section className="rounded-[22px] border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-900">
+          Demo mode can view scan actions, but only staff accounts can write keg events to Firestore.
+        </section>
+      ) : (
+        <section className="editorial-panel p-5 sm:p-6">
+          <div className="mb-5">
+            <p className="section-kicker">Event Details</p>
+            <h2 className="mt-2 text-3xl font-semibold text-[color:var(--ink)]">{selectedActionLabel}</h2>
+          </div>
+          <ActionForm
+            key={selectedAction}
+            scanType={selectedAction}
+            keg={keg}
+            locations={locationNames}
+            products={products}
+            onSubmit={async (fields) => {
+              setLoading(true);
+              setError("");
 
-            router.push(`/kegs/${params.id}`);
-          }}
-        />
-      </section>
-      {loading && <p className="text-sm text-slate-500">Saving...</p>}
+              try {
+                await recordKegScanEvent({
+                  kegId: id,
+                  scanType: selectedAction,
+                  userId: user.uid,
+                  userName: user.displayName ?? user.email,
+                  notes: fields.notes ?? null,
+                  formData: fields,
+                });
+                router.push(`/kegs/${id}`);
+              } catch (saveError) {
+                setError(saveError instanceof Error ? saveError.message : "Could not save keg event.");
+              } finally {
+                setLoading(false);
+              }
+            }}
+          />
+          {loading ? <p className="mt-4 text-sm text-slate-500">Saving {selectedActionLabel.toLowerCase()}...</p> : null}
+        </section>
+      )}
     </main>
   );
 }

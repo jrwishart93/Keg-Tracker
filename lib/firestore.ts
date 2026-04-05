@@ -18,6 +18,8 @@ import {
 import { db } from "@/lib/firebase";
 import type { CustomerRequest, CustomerRequestType } from "@/types/customer-request";
 import type { Keg } from "@/types/keg";
+import type { KegStatus } from "@/types/keg";
+import type { KegEvent, RecordKegScanInput } from "@/types/keg-event";
 import type { KegNameEntry } from "@/types/keg-name";
 import type { Location } from "@/types/location";
 import type { Movement } from "@/types/movement";
@@ -32,6 +34,7 @@ import {
   slugifyKegName,
   splitKegNameLines,
 } from "@/lib/keg-names";
+import { KEG_SCAN_LABELS, isKegScanType } from "@/types/keg-event";
 
 
 interface UserDocument {
@@ -43,12 +46,91 @@ interface UserDocument {
   lastLoginAt?: string;
 }
 
+function trimString(value: unknown): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
 function toIsoString(value: unknown): string | undefined {
   if (!value) return undefined;
   if (typeof value === "string") return value;
   if (value instanceof Date) return value.toISOString();
   if (value instanceof Timestamp) return value.toDate().toISOString();
   return undefined;
+}
+
+function humanizeToken(value: string) {
+  return value
+    .replace(/_/g, " ")
+    .replace(/-/g, " ")
+    .toLowerCase()
+    .replace(/\b\w/g, (match) => match.toUpperCase());
+}
+
+function normalizeStatusLabel(value?: string | null): KegStatus {
+  const normalized = value?.trim().toLowerCase();
+
+  switch (normalized) {
+    case "available":
+      return "Available";
+    case "checked in":
+    case "checked_in":
+      return "Checked In";
+    case "checked out":
+    case "checked_out":
+      return "Checked Out";
+    case "delivered":
+    case "off_site":
+      return "Delivered";
+    case "empty":
+      return "Empty";
+    case "filled":
+    case "on_site":
+      return "Filled";
+    case "in maintenance":
+    case "into maintenance":
+    case "maintenance":
+      return "In Maintenance";
+    case "lost":
+      return "Lost";
+    case "palletized":
+      return "Palletized";
+    case "ready for pickup":
+    case "ready_for_pickup":
+      return "Ready for Pickup";
+    case "returned":
+    case "return":
+      return "Returned";
+    case "washed":
+      return "Washed";
+    default:
+      return "Empty";
+  }
+}
+
+function normalizeEventTimestamp(raw: Record<string, unknown>) {
+  return toIsoString(raw.timestamp) ?? toIsoString(raw.createdAt) ?? new Date(0).toISOString();
+}
+
+function normalizeKegEvent(id: string, raw: Record<string, unknown>): KegEvent {
+  const rawType = trimString(raw.type) ?? "CHECK_IN";
+  const type = isKegScanType(rawType) ? rawType : "CHECK_IN";
+  const metadata = raw.metadata && typeof raw.metadata === "object" ? (raw.metadata as Record<string, unknown>) : {};
+
+  return {
+    id,
+    type,
+    label: trimString(raw.label) ?? KEG_SCAN_LABELS[type],
+    timestamp: normalizeEventTimestamp(raw),
+    userId: trimString(raw.userId),
+    userName: trimString(raw.userName),
+    notes: trimString(raw.notes),
+    metadata,
+  };
 }
 
 export interface Product {
@@ -58,65 +140,37 @@ export interface Product {
 }
 
 function normalizeMovement(id: string, raw: Record<string, unknown>): Movement {
-  const rawScanType = raw.scanType as string | undefined;
-  const rawType = (raw.type as string | undefined) ?? (raw.action as string | undefined);
-  const actionMap: Record<string, Movement["scanType"]> = {
-    check_in: "return",
-    check_out: "deliver",
-    wash: "wash",
-    fill: "fill",
-    deliver: "deliver",
-    delivery: "deliver",
-    empty: "empty",
-    ready_for_pickup: "return",
-    maintenance: "maintenance",
-    lost: "lost",
-    customer_request: "customer_request",
-  };
-
-  const resolvedType = (rawScanType ? actionMap[rawScanType] ?? (rawScanType as Movement["scanType"]) : undefined)
-    ?? (rawType ? actionMap[rawType] : undefined)
-    ?? "fill";
-  const resolvedEventType = (raw.type as Movement["type"] | undefined)
-    ?? (rawScanType === "deliver" ? "delivery" : (resolvedType as Movement["type"]));
+  const rawScanType = trimString(raw.scanType);
+  const rawType = trimString(raw.type) ?? trimString(raw.action);
+  const resolvedScanType = rawScanType ?? rawType ?? "UNKNOWN";
+  const resolvedEventType = rawType ?? resolvedScanType;
 
   return {
     id,
-    kegId: (raw.kegId as string | undefined) ?? "",
-    scanType: resolvedType,
+    kegId: trimString(raw.kegId) ?? "",
+    scanType: resolvedScanType,
     type: resolvedEventType,
-    fromLocation: raw.fromLocation as string | undefined,
-    toLocation: raw.toLocation as string | undefined,
-    product: raw.product as string | undefined,
-    batch: raw.batch as string | undefined,
-    timestamp: (raw.timestamp as string | undefined) ?? (raw.createdAt as string | undefined),
-    userId: raw.userId as string | undefined,
-    notes: raw.notes as string | undefined,
-    updatedBy: (raw.updatedBy as string | undefined) ?? (raw.createdBy as string | undefined) ?? "unknown",
+    label: trimString(raw.label) ?? humanizeToken(resolvedScanType),
+    fromLocation: trimString(raw.fromLocation) ?? undefined,
+    toLocation: trimString(raw.toLocation) ?? undefined,
+    product: trimString(raw.product) ?? undefined,
+    batch: trimString(raw.batch) ?? undefined,
+    timestamp: normalizeEventTimestamp(raw),
+    userId: trimString(raw.userId) ?? undefined,
+    notes: trimString(raw.notes) ?? undefined,
+    updatedBy: trimString(raw.updatedBy) ?? trimString(raw.createdBy) ?? "unknown",
   };
 }
 
 function normalizeKeg(id: string, raw: Record<string, unknown>): Keg {
-  const legacyStatus = raw.status as string | undefined;
-  const statusMap: Record<string, Keg["currentStatus"]> = {
-    on_site: "filled",
-    off_site: "delivered",
-    washed: "washed",
-    ready_for_pickup: "returned",
-    empty: "empty",
-    maintenance: "maintenance",
-    lost: "lost",
-  };
-
-  const resolvedStatus =
-    (raw.currentStatus as Keg["currentStatus"] | undefined) ??
-    (legacyStatus ? statusMap[legacyStatus] : undefined) ??
-    "empty";
+  const legacyStatus = trimString(raw.status);
+  const resolvedStatus = normalizeStatusLabel(trimString(raw.currentStatus) ?? legacyStatus);
   const productName = (raw.productName as string | undefined) ?? (raw.beerName as string | undefined) ?? (raw.product as string | undefined);
   const batchNumber = (raw.batchNumber as string | undefined) ?? (raw.batch as string | undefined);
   const filledAt = toIsoString(raw.filledAt) ?? (raw.packagingDate as string | undefined) ?? null;
   const bestBefore = toIsoString(raw.bestBefore) ?? (raw.bestBeforeDate as string | undefined) ?? null;
-  const lastUpdatedAt = (raw.lastUpdatedAt as string | undefined) ?? (raw.lastUpdated as string | undefined) ?? (raw.updatedAt as string | undefined);
+  const lastUpdatedAt = (raw.lastUpdatedAt as string | undefined) ?? (raw.lastUpdated as string | undefined) ?? (raw.updatedAt as string | undefined) ?? undefined;
+  const currentLocation = trimString(raw.currentLocation) ?? trimString(raw.locationId) ?? "Brewery";
 
   return {
     id,
@@ -124,15 +178,30 @@ function normalizeKeg(id: string, raw: Record<string, unknown>): Keg {
     name: (raw.name as string | undefined) ?? (raw.kegId as string | undefined) ?? id,
     qrCode: (raw.qrCode as string | undefined) ?? (raw.qrCodeValue as string | undefined) ?? "",
     currentStatus: resolvedStatus,
-    status: resolvedStatus,
-    washedAt: toIsoString(raw.washedAt) ?? null,
+    status: trimString(raw.status) ?? resolvedStatus,
+    washedAt: toIsoString(raw.washedAt) ?? toIsoString(raw.lastWashAt) ?? null,
     filledAt,
     bestBefore,
     productName,
     batchNumber,
-    currentLocation: (raw.currentLocation as string | undefined) ?? (raw.locationId as string | undefined) ?? "Brewery",
-    intendedLocation: raw.intendedLocation as string | undefined,
-    assignedCustomerId: (raw.assignedCustomerId as string | undefined) ?? null,
+    currentLocation,
+    intendedLocation: trimString(raw.intendedLocation),
+    returnLocation: trimString(raw.returnLocation),
+    serialNumber: trimString(raw.serialNumber),
+    assetNumber: trimString(raw.assetNumber),
+    ownerName: trimString(raw.ownerName) ?? trimString(raw.owner),
+    leaseName: trimString(raw.leaseName) ?? trimString(raw.leaseHolder),
+    dateOfManufacture: trimString(raw.dateOfManufacture),
+    inMaintenance: typeof raw.inMaintenance === "boolean" ? raw.inMaintenance : normalizeStatusLabel(trimString(raw.currentStatus) ?? legacyStatus) === "In Maintenance",
+    isLost: typeof raw.isLost === "boolean" ? raw.isLost : normalizeStatusLabel(trimString(raw.currentStatus) ?? legacyStatus) === "Lost",
+    lastWashAt: toIsoString(raw.lastWashAt) ?? toIsoString(raw.washedAt) ?? null,
+    lastFillAt: toIsoString(raw.lastFillAt) ?? filledAt,
+    readyForPickupAt: toIsoString(raw.readyForPickupAt) ?? null,
+    palletizedAt: toIsoString(raw.palletizedAt) ?? null,
+    checkedInAt: toIsoString(raw.checkedInAt) ?? null,
+    checkedOutAt: toIsoString(raw.checkedOutAt) ?? null,
+    updatedAt: toIsoString(raw.updatedAt) ?? lastUpdatedAt ?? null,
+    assignedCustomerId: trimString(raw.assignedCustomerId),
     product: (raw.product as string | undefined) ?? (raw.productId as string | undefined) ?? productName ?? undefined,
     batch: raw.batch as string | undefined,
     beerName: raw.beerName as string | undefined,
@@ -170,6 +239,10 @@ export const collections = {
   movements: collection(db, "movements"),
   customerRequests: collection(db, "customerRequests"),
 };
+
+function kegEventsCollection(kegId: string) {
+  return collection(db, "kegs", kegId, "events");
+}
 
 export async function seedCoreData() {
   await Promise.all([
@@ -367,8 +440,307 @@ export async function getKegById(id: string): Promise<Keg | null> {
   return normalizeKeg(snap.id, snap.data());
 }
 
+export async function getKegEvents(kegId: string): Promise<KegEvent[]> {
+  const eventQuery = query(kegEventsCollection(kegId), orderBy("timestamp", "desc"));
+  const snap = await getDocs(eventQuery);
+  return snap.docs.map((eventDoc) => normalizeKegEvent(eventDoc.id, eventDoc.data()));
+}
+
 export async function updateKeg(id: string, payload: Record<string, unknown>) {
   return updateDoc(doc(db, "kegs", id), payload);
+}
+
+function getFormValue(formData: Record<string, unknown> | undefined, key: string) {
+  return trimString(formData?.[key]);
+}
+
+function requireFormValue(formData: Record<string, unknown> | undefined, key: string, label: string) {
+  const value = getFormValue(formData, key);
+  if (!value) {
+    throw new Error(`${label} is required.`);
+  }
+  return value;
+}
+
+function normalizeDateInput(value: string, label: string) {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    throw new Error(`${label} must be a valid date.`);
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return value;
+  }
+
+  return parsed.toISOString().split("T")[0];
+}
+
+function buildKegPatchWithTimestamp(timestamp: string, patch: Record<string, unknown>) {
+  return {
+    ...patch,
+    updatedAt: timestamp,
+    lastUpdatedAt: timestamp,
+    lastUpdated: timestamp,
+  };
+}
+
+function buildScanEventForKeg(keg: Keg, input: RecordKegScanInput, timestamp: string) {
+  const formData = input.formData ?? {};
+  const notes = trimString(input.notes) ?? getFormValue(formData, "notes");
+  const location = getFormValue(formData, "currentLocation");
+  const destination = getFormValue(formData, "destination") ?? getFormValue(formData, "nextLocation");
+  const customerName = getFormValue(formData, "customerName");
+  const batchNumber = getFormValue(formData, "batchNumber") ?? getFormValue(formData, "batch");
+
+  let metadata: Record<string, unknown> = {};
+  let updates: Record<string, unknown>;
+
+  switch (input.scanType) {
+    case "CHECK_IN":
+      metadata = {
+        ...(location ? { currentLocation: location } : {}),
+        ...(getFormValue(formData, "receivedBy") ? { receivedBy: getFormValue(formData, "receivedBy") } : {}),
+      };
+      updates = buildKegPatchWithTimestamp(timestamp, {
+        currentStatus: "Checked In",
+        status: "Checked In",
+        checkedInAt: timestamp,
+        ...(location ? { currentLocation: location } : {}),
+      });
+      break;
+    case "CHECK_OUT":
+      metadata = {
+        ...(destination ? { destination } : {}),
+        ...(customerName ? { customerName } : {}),
+        ...(getFormValue(formData, "dispatchNote") ? { dispatchNote: getFormValue(formData, "dispatchNote") } : {}),
+      };
+      updates = buildKegPatchWithTimestamp(timestamp, {
+        currentStatus: "Checked Out",
+        status: "Checked Out",
+        checkedOutAt: timestamp,
+      });
+      break;
+    case "WASH":
+      metadata = {
+        ...(getFormValue(formData, "washType") ? { washType: getFormValue(formData, "washType") } : {}),
+        ...(getFormValue(formData, "operator") ? { operator: getFormValue(formData, "operator") } : {}),
+      };
+      updates = buildKegPatchWithTimestamp(timestamp, {
+        currentStatus: "Washed",
+        status: "Washed",
+        lastWashAt: timestamp,
+        washedAt: timestamp,
+      });
+      break;
+    case "FILL": {
+      const resolvedProductName = requireFormValue(formData, "productName", "Product name");
+      const resolvedBestBefore = normalizeDateInput(requireFormValue(formData, "bestBefore", "Best before date"), "Best before date");
+      const resolvedBatchNumber = batchNumber;
+      const packagingDate = getFormValue(formData, "packagingDate") ?? timestamp;
+
+      metadata = {
+        productName: resolvedProductName,
+        ...(resolvedBatchNumber ? { batchNumber: resolvedBatchNumber } : {}),
+        bestBeforeDate: resolvedBestBefore,
+        ...(getFormValue(formData, "filledVolume") ? { filledVolume: getFormValue(formData, "filledVolume") } : {}),
+        ...(location ? { currentLocation: location } : {}),
+      };
+      updates = buildKegPatchWithTimestamp(timestamp, {
+        currentStatus: "Filled",
+        status: "Filled",
+        lastFillAt: timestamp,
+        filledAt: timestamp,
+        bestBefore: resolvedBestBefore,
+        bestBeforeDate: resolvedBestBefore,
+        productName: resolvedProductName,
+        product: resolvedProductName,
+        beerName: resolvedProductName,
+        batchNumber: resolvedBatchNumber ?? null,
+        batch: resolvedBatchNumber ?? null,
+        packagingDate,
+      });
+      break;
+    }
+    case "READY_FOR_PICKUP":
+      metadata = {};
+      updates = buildKegPatchWithTimestamp(timestamp, {
+        currentStatus: "Ready for Pickup",
+        status: "Ready for Pickup",
+        readyForPickupAt: timestamp,
+      });
+      break;
+    case "PALLETIZE":
+      metadata = {};
+      updates = buildKegPatchWithTimestamp(timestamp, {
+        currentStatus: "Palletized",
+        status: "Palletized",
+        palletizedAt: timestamp,
+      });
+      break;
+    case "CHANGE_RETURN_LOCATION": {
+      const newReturnLocation = requireFormValue(formData, "returnLocation", "Return location");
+      metadata = {
+        previousReturnLocation: keg.returnLocation ?? null,
+        newReturnLocation,
+      };
+      updates = buildKegPatchWithTimestamp(timestamp, {
+        returnLocation: newReturnLocation,
+      });
+      break;
+    }
+    case "INTO_MAINTENANCE":
+      metadata = {
+        ...(getFormValue(formData, "reason") ? { reason: getFormValue(formData, "reason") } : {}),
+      };
+      updates = buildKegPatchWithTimestamp(timestamp, {
+        inMaintenance: true,
+        currentStatus: "In Maintenance",
+        status: "In Maintenance",
+      });
+      break;
+    case "OUT_OF_MAINTENANCE":
+      metadata = {
+        ...(getFormValue(formData, "repairNotes") ? { repairNotes: getFormValue(formData, "repairNotes") } : {}),
+      };
+      updates = buildKegPatchWithTimestamp(timestamp, {
+        inMaintenance: false,
+        currentStatus: "Available",
+        status: "Available",
+      });
+      break;
+    case "LOST":
+      metadata = {
+        ...(getFormValue(formData, "lastKnownLocation") ? { lastKnownLocation: getFormValue(formData, "lastKnownLocation") } : {}),
+      };
+      updates = buildKegPatchWithTimestamp(timestamp, {
+        isLost: true,
+        currentStatus: "Lost",
+        status: "Lost",
+      });
+      break;
+    case "CHANGE_DATE_OF_MANUFACTURE": {
+      const newDateOfManufacture = normalizeDateInput(requireFormValue(formData, "dateOfManufacture", "Date of manufacture"), "Date of manufacture");
+      metadata = {
+        previousDateOfManufacture: keg.dateOfManufacture ?? null,
+        newDateOfManufacture,
+      };
+      updates = buildKegPatchWithTimestamp(timestamp, {
+        dateOfManufacture: newDateOfManufacture,
+      });
+      break;
+    }
+    case "CHANGE_OF_LEASE": {
+      const newLeaseName = requireFormValue(formData, "leaseName", "Lease name");
+      metadata = {
+        previousLeaseName: keg.leaseName ?? null,
+        newLeaseName,
+      };
+      updates = buildKegPatchWithTimestamp(timestamp, {
+        leaseName: newLeaseName,
+      });
+      break;
+    }
+    case "CHANGE_OF_OWNER": {
+      const newOwnerName = requireFormValue(formData, "ownerName", "Owner name");
+      metadata = {
+        previousOwnerName: keg.ownerName ?? null,
+        newOwnerName,
+      };
+      updates = buildKegPatchWithTimestamp(timestamp, {
+        ownerName: newOwnerName,
+      });
+      break;
+    }
+    case "CHANGE_SERIAL_NUMBER": {
+      const newSerialNumber = requireFormValue(formData, "serialNumber", "Serial number");
+      metadata = {
+        previousSerialNumber: keg.serialNumber ?? null,
+        newSerialNumber,
+      };
+      updates = buildKegPatchWithTimestamp(timestamp, {
+        serialNumber: newSerialNumber,
+      });
+      break;
+    }
+    case "CHANGE_ASSET_NUMBER": {
+      const newAssetNumber = requireFormValue(formData, "assetNumber", "Asset number");
+      metadata = {
+        previousAssetNumber: keg.assetNumber ?? null,
+        newAssetNumber,
+      };
+      updates = buildKegPatchWithTimestamp(timestamp, {
+        assetNumber: newAssetNumber,
+      });
+      break;
+    }
+    default:
+      throw new Error("Unsupported scan type.");
+  }
+
+  const event = {
+    type: input.scanType,
+    label: KEG_SCAN_LABELS[input.scanType],
+    timestamp,
+    userId: trimString(input.userId) ?? null,
+    userName: trimString(input.userName) ?? null,
+    notes,
+    metadata,
+  };
+
+  return { event, updates };
+}
+
+function buildMovementMirror(keg: Keg, event: Omit<KegEvent, "id">, updates: Record<string, unknown>): Omit<Movement, "id"> {
+  const metadata = event.metadata;
+  const nextLocation =
+    trimString(metadata.newReturnLocation)
+    ?? trimString(metadata.destination)
+    ?? trimString(metadata.currentLocation)
+    ?? (typeof updates.currentLocation === "string" ? updates.currentLocation : null);
+
+  return {
+    kegId: keg.kegId ?? keg.id,
+    scanType: event.type,
+    type: event.type,
+    label: event.label,
+    fromLocation: keg.currentLocation ?? undefined,
+    toLocation: nextLocation ?? undefined,
+    product: trimString(metadata.productName) ?? keg.productName ?? keg.product ?? undefined,
+    batch: trimString(metadata.batchNumber) ?? keg.batchNumber ?? keg.batch ?? undefined,
+    timestamp: event.timestamp,
+    userId: event.userId ?? undefined,
+    notes: event.notes ?? undefined,
+    updatedBy: event.userName ?? "unknown",
+  };
+}
+
+export async function recordKegScanEvent(input: RecordKegScanInput): Promise<void> {
+  if (!isKegScanType(input.scanType)) {
+    throw new Error("Unsupported scan type.");
+  }
+
+  const kegRef = doc(db, "kegs", input.kegId);
+  const eventRef = doc(kegEventsCollection(input.kegId));
+  const movementRef = doc(collections.movements);
+
+  await runTransaction(db, async (transaction) => {
+    const kegSnap = await transaction.get(kegRef);
+    if (!kegSnap.exists()) {
+      throw new Error("Keg not found.");
+    }
+
+    const keg = normalizeKeg(kegSnap.id, kegSnap.data());
+    const timestamp = new Date().toISOString();
+    const { event, updates } = buildScanEventForKeg(keg, input, timestamp);
+    const mirrorMovement = buildMovementMirror(keg, event, updates);
+
+    transaction.set(eventRef, event);
+    transaction.update(kegRef, updates);
+    transaction.set(movementRef, {
+      ...mirrorMovement,
+      createdAt: serverTimestamp(),
+    });
+  });
 }
 
 export interface CreateKegInput {
@@ -410,7 +782,7 @@ export async function createKeg(payload: CreateKegInput) {
   const resolvedBatchNumber = payload.batchNumber?.trim() || payload.batch?.trim() || undefined;
   const resolvedFilledAt = resolvedProductName ? payload.filledAt?.trim() || payload.packagingDate?.trim() || now : null;
   const resolvedBestBefore = payload.bestBefore?.trim() || payload.bestBeforeDate?.trim() || null;
-  const resolvedStatus: Keg["currentStatus"] = resolvedProductName ? "filled" : "empty";
+  const resolvedStatus: Keg["currentStatus"] = resolvedProductName ? "Filled" : "Empty";
 
   const keg: Omit<Keg, "id"> = {
     kegId,
@@ -419,12 +791,27 @@ export async function createKeg(payload: CreateKegInput) {
     currentStatus: resolvedStatus,
     status: resolvedStatus,
     washedAt: null,
+    lastWashAt: null,
     filledAt: resolvedFilledAt,
+    lastFillAt: resolvedFilledAt,
     bestBefore: resolvedBestBefore,
     productName: resolvedProductName ?? null,
     batchNumber: resolvedBatchNumber ?? null,
     currentLocation,
     intendedLocation,
+    returnLocation: null,
+    serialNumber: null,
+    assetNumber: null,
+    ownerName: "B Effect Brewing",
+    leaseName: payload.assignedCustomerId?.trim() || null,
+    dateOfManufacture: null,
+    inMaintenance: false,
+    isLost: false,
+    readyForPickupAt: null,
+    palletizedAt: null,
+    checkedInAt: null,
+    checkedOutAt: null,
+    updatedAt: now,
     assignedCustomerId: payload.assignedCustomerId?.trim() || null,
     product: payload.product?.trim() || resolvedProductName || undefined,
     beerName: payload.beerName?.trim() || resolvedProductName || undefined,
@@ -526,10 +913,12 @@ export async function markKegWashed(params: { kegDocId: string; userId: string; 
   await updateKegWithMovement(
     params.kegDocId,
     {
-      currentStatus: "washed",
-      status: "washed",
+      currentStatus: "Washed",
+      status: "Washed",
       washedAt: now,
+      lastWashAt: now,
       filledAt: null,
+      lastFillAt: null,
       bestBefore: null,
       productName: null,
       batchNumber: null,
@@ -546,8 +935,8 @@ export async function markKegWashed(params: { kegDocId: string; userId: string; 
       kegId: keg.kegId ?? keg.id,
       scanType: "wash",
       type: "wash",
-      fromLocation: keg.currentLocation,
-      toLocation: keg.currentLocation,
+      fromLocation: keg.currentLocation ?? undefined,
+      toLocation: keg.currentLocation ?? undefined,
       timestamp: now,
       userId: params.userId,
       notes: params.notes,
@@ -582,9 +971,10 @@ export async function fillKegLifecycle(params: {
   await updateKegWithMovement(
     params.kegDocId,
     {
-      currentStatus: "filled",
-      status: "filled",
+      currentStatus: "Filled",
+      status: "Filled",
       filledAt: now,
+      lastFillAt: now,
       bestBefore,
       productName,
       batchNumber: batchNumber ?? null,
@@ -600,8 +990,8 @@ export async function fillKegLifecycle(params: {
       kegId: keg.kegId ?? keg.id,
       scanType: "fill",
       type: "fill",
-      fromLocation: keg.currentLocation,
-      toLocation: keg.currentLocation,
+      fromLocation: keg.currentLocation ?? undefined,
+      toLocation: keg.currentLocation ?? undefined,
       product: productName,
       batch: batchNumber,
       timestamp: now,
@@ -636,8 +1026,8 @@ export async function deliverKegLifecycle(params: {
   await updateKegWithMovement(
     params.kegDocId,
     {
-      currentStatus: "delivered",
-      status: "delivered",
+      currentStatus: "Delivered",
+      status: "Delivered",
       currentLocation: location,
       intendedLocation: location,
       assignedCustomerId: customerName,
@@ -648,7 +1038,7 @@ export async function deliverKegLifecycle(params: {
       kegId: keg.kegId ?? keg.id,
       scanType: "deliver",
       type: "delivery",
-      fromLocation: keg.currentLocation,
+      fromLocation: keg.currentLocation ?? undefined,
       toLocation: location,
       product: keg.productName ?? keg.product,
       batch: keg.batchNumber ?? keg.batch,
