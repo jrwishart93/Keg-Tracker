@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { QRCodePreview } from "@/components/QRCodePreview";
 import { buildQrCodeValue, isValidQrCodeValue } from "@/lib/keg-names";
 import { createKeg, getAvailableKegNames, getKegNameSummary, getLocations, getProducts, seedCoreData, seedDefaultKegNames } from "@/lib/firestore";
+import { useAuth } from "@/context/auth-context";
 import type { Keg } from "@/types/keg";
 import type { KegNameEntry } from "@/types/keg-name";
 
@@ -21,6 +22,7 @@ function plusDays(dateString: string, days: number) {
 }
 
 export function AllocateKegForm() {
+  const { state: { user, loading: authLoading } } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -50,6 +52,15 @@ export function AllocateKegForm() {
   }, [availableNames, searchTerm]);
 
   useEffect(() => {
+    // Wait for Firebase Auth to restore its session before making authenticated
+    // Firestore reads. Without this guard, all reads fail with permission-denied
+    // on a fresh page load because Auth is async.
+    if (authLoading) return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
     async function loadReferenceData() {
       setLoading(true);
       setError("");
@@ -104,7 +115,8 @@ export function AllocateKegForm() {
     }
 
     void loadReferenceData();
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, user]);
 
   useEffect(() => {
     if (!form.kegId && filteredNames[0]) {
