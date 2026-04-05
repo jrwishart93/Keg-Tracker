@@ -1,7 +1,14 @@
-import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from "firebase/auth";
+import {
+  EmailAuthProvider,
+  onAuthStateChanged,
+  reauthenticateWithCredential,
+  signInWithEmailAndPassword,
+  signOut,
+  updatePassword,
+} from "firebase/auth";
 import { auth } from "@/lib/firebase";
-import { getUserById } from "@/lib/firestore";
-import type { AppUser } from "@/types/user";
+import { clearPasswordChangeRequirement, getUserById, updateUserLastLogin } from "@/lib/firestore";
+import type { AppUser, UserRole } from "@/types/user";
 
 function requireAuth() {
   if (!auth) {
@@ -10,15 +17,59 @@ function requireAuth() {
   return auth;
 }
 
+function setCookie(name: string, value: string, maxAgeSeconds = 86400) {
+  document.cookie = `${name}=${value}; path=/; max-age=${maxAgeSeconds}; samesite=lax`;
+}
+
+function clearCookie(name: string) {
+  document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+}
+
+// Session cookies are used by proxy.ts to gate routes without storing credentials in the client.
+function setSessionCookies(profile: AppUser) {
+  setCookie("kt_session", "1");
+  setCookie("kt_role", profile.role);
+  setCookie("kt_requires_password_change", profile.requiresPasswordChange ? "1" : "0");
+}
+
 export async function loginWithEmail(email: string, password: string): Promise<AppUser | null> {
   const result = await signInWithEmailAndPassword(requireAuth(), email, password);
-  document.cookie = "kt_session=1; path=/; max-age=86400";
-  return getUserById(result.user.uid);
+  const profile = await getUserById(result.user.uid);
+
+  if (!profile) {
+    clearCookie("kt_session");
+    clearCookie("kt_role");
+    clearCookie("kt_requires_password_change");
+    return null;
+  }
+
+  await updateUserLastLogin(result.user.uid);
+  const updatedProfile = { ...profile, lastLoginAt: new Date().toISOString() };
+  setSessionCookies(updatedProfile);
+  return updatedProfile;
+}
+
+// Change-password flow reauthenticates first, then updates Auth password and Firestore flag.
+export async function completePasswordChange(currentPassword: string, newPassword: string) {
+  const currentAuth = requireAuth();
+  const user = currentAuth.currentUser;
+
+  if (!user || !user.email) {
+    throw new Error("No signed-in user available.");
+  }
+
+  const credential = EmailAuthProvider.credential(user.email, currentPassword);
+  await reauthenticateWithCredential(user, credential);
+  await updatePassword(user, newPassword);
+  await clearPasswordChangeRequirement(user.uid);
+  setCookie("kt_requires_password_change", "0");
 }
 
 export async function logout() {
   await signOut(requireAuth());
-  document.cookie = "kt_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+  clearCookie("kt_session");
+  clearCookie("kt_role");
+  clearCookie("kt_requires_password_change");
 }
 
 export function watchAuthState(callback: (user: AppUser | null) => void) {
@@ -27,6 +78,12 @@ export function watchAuthState(callback: (user: AppUser | null) => void) {
       callback(null);
       return;
     }
-    callback(await getUserById(firebaseUser.uid));
+
+    const profile = await getUserById(firebaseUser.uid);
+    callback(profile);
   });
+}
+
+export function hasRoleAccess(role: UserRole | undefined, requiredRoles: UserRole[]) {
+  return Boolean(role && requiredRoles.includes(role));
 }
