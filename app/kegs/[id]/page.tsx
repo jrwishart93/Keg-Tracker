@@ -16,15 +16,15 @@ export default async function KegDetailPage({ params }: { params: Promise<{ id: 
   return (
     <main className="space-y-5">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Keg #{keg.kegId ?? keg.id}</h1>
+        <h1 className="text-3xl font-bold text-[#131E29]">Keg #{keg.kegId ?? keg.id}</h1>
         <StatusBadge status={keg.currentStatus} />
       </div>
-      <div className="rounded-xl border border-slate-200 bg-white p-4">
-        <p>Current location: {keg.currentLocation}</p>
-        <p>Current product: {keg.product ?? "n/a"}</p>
-        <p>Last updated: {keg.lastUpdatedAt ?? "n/a"}</p>
+      <div className="space-y-1 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <p><span className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Current location:</span> {keg.currentLocation}</p>
+        <p><span className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Current product:</span> {keg.product ?? "n/a"}</p>
+        <p><span className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Last updated:</span> {keg.lastUpdatedAt ?? "n/a"}</p>
       </div>
-      <Link href={`/kegs/${keg.id}/action`} className="inline-flex min-h-11 items-center rounded-lg bg-slate-900 px-4 text-white">
+      <Link href={`/kegs/${keg.id}/action`} className="inline-flex min-h-12 items-center rounded-lg bg-[#131E29] px-5 font-semibold text-white">
         Update this keg
       </Link>
       <section>

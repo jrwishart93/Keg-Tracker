@@ -98,7 +98,7 @@ export function ActionForm({
   }
 
   function renderField(field: FieldConfig) {
-    const commonInputClass = "min-h-11 w-full rounded-lg border border-slate-300 px-3";
+    const commonInputClass = "mt-1 min-h-12 w-full rounded-lg border border-slate-300 bg-slate-50 px-3 text-slate-900";
     const value = form[field.key] ?? "";
 
     if (field.type === "select") {
@@ -123,7 +123,7 @@ export function ActionForm({
     if (field.type === "notes") {
       return (
         <textarea
-          className="w-full rounded-lg border border-slate-300 px-3 py-2"
+          className="mt-1 w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-slate-900"
           value={value}
           rows={3}
           onChange={(event) => updateField(field.key, event.target.value)}
@@ -165,9 +165,11 @@ export function ActionForm({
     );
   }
 
+  const destructiveAction = actionType === "lost";
+
   return (
     <form
-      className="space-y-3"
+      className="space-y-4"
       onSubmit={async (event) => {
         event.preventDefault();
         await onSubmit(form);
@@ -175,11 +177,14 @@ export function ActionForm({
     >
       {fields.map((field) => (
         <label key={field.key} className="block">
-          <span className="mb-1 block text-sm font-medium text-slate-700">{field.label}</span>
+          <span className="block text-xs font-semibold tracking-[0.12em] text-slate-500">{field.label.toUpperCase()}</span>
           {renderField(field)}
         </label>
       ))}
-      <button type="submit" className="min-h-11 w-full rounded-lg bg-slate-900 px-4 font-semibold text-white">
+      <button
+        type="submit"
+        className={`min-h-12 w-full rounded-lg px-4 font-semibold text-white ${destructiveAction ? "bg-rose-700" : "bg-[#131E29]"}`}
+      >
         Submit
       </button>
     </form>

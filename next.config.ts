@@ -1,7 +1,18 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // TODO (Phase 6): add next-pwa plugin configuration.
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "beffect.nz",
+      },
+      {
+        protocol: "https",
+        hostname: "encrypted-tbn0.gstatic.com",
+      },
+    ],
+  },
 };
 
 export default nextConfig;
