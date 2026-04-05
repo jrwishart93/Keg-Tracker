@@ -8,11 +8,12 @@ export default async function DashboardPage() {
 
   const counts = {
     total: kegs.length,
-    onSite: kegs.filter((keg) => keg.status === "on_site").length,
-    offSite: kegs.filter((keg) => keg.status === "off_site").length,
-    empty: kegs.filter((keg) => keg.status === "empty").length,
-    maintenance: kegs.filter((keg) => keg.status === "maintenance").length,
-    lost: kegs.filter((keg) => keg.status === "lost").length,
+    filled: kegs.filter((keg) => keg.currentStatus === "filled").length,
+    delivered: kegs.filter((keg) => keg.currentStatus === "delivered").length,
+    returned: kegs.filter((keg) => keg.currentStatus === "returned").length,
+    empty: kegs.filter((keg) => keg.currentStatus === "empty").length,
+    maintenance: kegs.filter((keg) => keg.currentStatus === "maintenance").length,
+    lost: kegs.filter((keg) => keg.currentStatus === "lost").length,
   };
 
   return (
