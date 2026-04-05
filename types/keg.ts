@@ -6,6 +6,7 @@ export interface Keg {
   qrCode: string;
   currentStatus: KegStatus;
   currentLocation: string;
+  intendedLocation?: string;
   product?: string;
   batch?: string;
   beerName?: string;
@@ -13,4 +14,5 @@ export interface Keg {
   packagingDate?: string;
   bestBeforeDate?: string;
   lastUpdatedAt?: string;
+  createdAt?: string;
 }

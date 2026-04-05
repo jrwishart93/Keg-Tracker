@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ActionForm } from "@/components/ActionForm";
-import { createMovement, getLocations, getProducts, seedCoreData, updateKeg } from "@/lib/firestore";
+import { createMovement, getKegById, getLocations, getProducts, seedCoreData, updateKeg } from "@/lib/firestore";
+import type { Keg } from "@/types/keg";
 import type { KegStatus } from "@/types/keg";
 import type { MovementAction } from "@/types/movement";
 
@@ -30,6 +31,7 @@ const actionLabels: Record<MovementAction, string> = {
 export default function KegActionPage({ params }: { params: { id: string } }) {
   const [selectedAction, setSelectedAction] = useState<MovementAction>("fill");
   const [loading, setLoading] = useState(false);
+  const [keg, setKeg] = useState<Keg | null>(null);
   const [locationNames, setLocationNames] = useState<string[]>(["Brewery", "b.social / Tap Room"]);
   const [products, setProducts] = useState<{ id: string; name: string; abv: number }[]>([]);
   const router = useRouter();
@@ -37,17 +39,34 @@ export default function KegActionPage({ params }: { params: { id: string } }) {
   useEffect(() => {
     async function loadReferenceData() {
       await seedCoreData();
-      const [locations, loadedProducts] = await Promise.all([getLocations(), getProducts()]);
+      const [locations, loadedProducts, loadedKeg] = await Promise.all([getLocations(), getProducts(), getKegById(params.id)]);
       if (locations.length > 0) {
         setLocationNames(Array.from(new Set(locations.map((location) => location.name))));
       }
       setProducts(loadedProducts);
+      setKeg(loadedKeg);
     }
 
     void loadReferenceData();
-  }, []);
+  }, [params.id]);
 
   const selectedActionLabel = useMemo(() => actionLabels[selectedAction], [selectedAction]);
+
+  function getNextCurrentLocation(fields: Record<string, string>) {
+    if (selectedAction === "deliver" || selectedAction === "return") {
+      return fields.nextLocation ?? fields.currentLocation ?? keg?.currentLocation ?? "Brewery";
+    }
+
+    return fields.currentLocation ?? fields.lastKnownLocation ?? keg?.currentLocation ?? "Brewery";
+  }
+
+  function getNextIntendedLocation(fields: Record<string, string>) {
+    if (selectedAction === "deliver" || selectedAction === "return") {
+      return fields.nextLocation ?? keg?.intendedLocation;
+    }
+
+    return keg?.intendedLocation;
+  }
 
   return (
     <main className="space-y-4">
@@ -77,24 +96,24 @@ export default function KegActionPage({ params }: { params: { id: string } }) {
 
             const now = new Date().toISOString();
             await updateKeg(params.id, {
-              kegId: params.id,
+              currentLocation: getNextCurrentLocation(fields),
+              intendedLocation: getNextIntendedLocation(fields),
               currentStatus: actionToStatus[selectedAction],
-              currentLocation: fields.currentLocation ?? fields.lastKnownLocation ?? "Brewery",
-              product: fields.product,
-              batch: fields.batch,
-              beerName: fields.beerName,
-              abv: fields.abv ? Number(fields.abv) : undefined,
-              packagingDate: fields.packagingDate,
-              bestBeforeDate: fields.bestBeforeDate,
+              product: fields.product ?? keg?.product,
+              batch: fields.batch ?? keg?.batch,
+              beerName: fields.beerName ?? keg?.beerName,
+              abv: fields.abv ? Number(fields.abv) : keg?.abv,
+              packagingDate: fields.packagingDate ?? keg?.packagingDate,
+              bestBeforeDate: fields.bestBeforeDate ?? keg?.bestBeforeDate,
               lastUpdatedAt: now,
             });
 
             await createMovement({
-              kegId: params.id,
+              kegId: keg?.kegId ?? params.id,
               scanType: selectedAction,
               fromLocation: fields.currentLocation,
               toLocation: fields.nextLocation,
-              product: fields.product,
+              product: fields.product ?? keg?.product,
               batch: fields.batch,
               timestamp: now,
               notes: JSON.stringify({ ...fields, scanType: selectedActionLabel }),

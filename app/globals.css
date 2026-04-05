@@ -27,3 +27,13 @@ h2,
 h3 {
   letter-spacing: -0.01em;
 }
+
+@media print {
+  body {
+    background: #ffffff;
+  }
+
+  .print-sticker {
+    break-inside: avoid;
+  }
+}

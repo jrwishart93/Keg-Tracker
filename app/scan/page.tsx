@@ -17,7 +17,7 @@ export default function ScanPage() {
       router.push(`/kegs/${keg.id}/action`);
       return;
     }
-    setMessage("Keg not found. Register this keg in admin tools.");
+    setMessage("Keg not found. Allocate it first from the Kegs screen and then print its sticker.");
     setScannerEnabled(false);
   }
 

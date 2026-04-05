@@ -1,5 +1,4 @@
 import {
-  addDoc,
   collection,
   doc,
   getDoc,
@@ -7,17 +6,22 @@ import {
   limit,
   orderBy,
   query,
+  runTransaction,
   serverTimestamp,
   setDoc,
   updateDoc,
   where,
   Timestamp,
+  writeBatch,
+  addDoc,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import type { Keg } from "@/types/keg";
+import type { KegNameEntry } from "@/types/keg-name";
 import type { Location } from "@/types/location";
 import type { Movement } from "@/types/movement";
 import type { AppUser } from "@/types/user";
+import { buildQrCodeValue, DEFAULT_KEG_NAMES, dedupeKegNames, normalizeKegNameInput, slugifyKegName, splitKegNameLines } from "@/lib/keg-names";
 
 
 interface UserDocument {
@@ -86,6 +90,7 @@ function normalizeKeg(id: string, raw: Record<string, unknown>): Keg {
     qrCode: (raw.qrCode as string | undefined) ?? (raw.qrCodeValue as string | undefined) ?? "",
     currentStatus: (raw.currentStatus as Keg["currentStatus"] | undefined) ?? (legacyStatus ? statusMap[legacyStatus] : undefined) ?? "empty",
     currentLocation: (raw.currentLocation as string | undefined) ?? (raw.locationId as string | undefined) ?? "Brewery",
+    intendedLocation: raw.intendedLocation as string | undefined,
     product: (raw.product as string | undefined) ?? (raw.productId as string | undefined),
     batch: raw.batch as string | undefined,
     beerName: raw.beerName as string | undefined,
@@ -93,6 +98,7 @@ function normalizeKeg(id: string, raw: Record<string, unknown>): Keg {
     packagingDate: raw.packagingDate as string | undefined,
     bestBeforeDate: raw.bestBeforeDate as string | undefined,
     lastUpdatedAt: (raw.lastUpdatedAt as string | undefined) ?? (raw.updatedAt as string | undefined),
+    createdAt: (raw.createdAt as string | undefined) ?? (raw.lastUpdatedAt as string | undefined) ?? (raw.updatedAt as string | undefined),
   };
 }
 
@@ -115,6 +121,7 @@ const DEFAULT_LOCATIONS: Location[] = [
 export const collections = {
   users: collection(db, "users"),
   kegs: collection(db, "kegs"),
+  kegNames: collection(db, "kegNames"),
   locations: collection(db, "locations"),
   products: collection(db, "products"),
   movements: collection(db, "movements"),
@@ -127,6 +134,92 @@ export async function seedCoreData() {
     ),
     ...DEFAULT_LOCATIONS.map((location) => setDoc(doc(db, "locations", location.id), location, { merge: true })),
   ]);
+}
+
+function normalizeKegName(id: string, raw: Record<string, unknown>): KegNameEntry {
+  return {
+    id,
+    name: (raw.name as string | undefined) ?? id,
+    assigned: Boolean(raw.assigned),
+    assignedKegId: raw.assignedKegId as string | undefined,
+    createdAt: (raw.createdAt as string | undefined) ?? (raw.updatedAt as string | undefined),
+  };
+}
+
+export async function seedDefaultKegNames() {
+  const existing = await getDocs(collections.kegNames);
+  if (existing.docs.length > 0) {
+    return;
+  }
+
+  const batch = writeBatch(db);
+  const now = new Date().toISOString();
+
+  for (const name of DEFAULT_KEG_NAMES) {
+    const normalizedName = normalizeKegNameInput(name);
+    const id = slugifyKegName(normalizedName);
+    batch.set(doc(db, "kegNames", id), {
+      name: normalizedName,
+      assigned: false,
+      createdAt: now,
+    });
+  }
+
+  await batch.commit();
+}
+
+export async function getKegNames(): Promise<KegNameEntry[]> {
+  const snap = await getDocs(collections.kegNames);
+  return snap.docs.map((d) => normalizeKegName(d.id, d.data()));
+}
+
+export async function getAvailableKegNames(): Promise<KegNameEntry[]> {
+  const names = await getKegNames();
+  return names
+    .filter((entry) => !entry.assigned)
+    .sort((left, right) => left.name.localeCompare(right.name));
+}
+
+export async function getKegNameSummary() {
+  const names = await getKegNames();
+  const assigned = names.filter((entry) => entry.assigned).length;
+
+  return {
+    total: names.length,
+    assigned,
+    available: names.length - assigned,
+  };
+}
+
+export async function addKegNames(rawValue: string) {
+  const parsedNames = dedupeKegNames(splitKegNameLines(rawValue));
+  if (parsedNames.length === 0) {
+    return { added: 0, skipped: 0 };
+  }
+
+  const existing = await getKegNames();
+  const existingIds = new Set(existing.map((entry) => entry.id));
+  const toAdd = parsedNames.filter((name) => !existingIds.has(slugifyKegName(name)));
+  const skipped = parsedNames.length - toAdd.length;
+
+  if (toAdd.length === 0) {
+    return { added: 0, skipped };
+  }
+
+  const batch = writeBatch(db);
+  const now = new Date().toISOString();
+
+  for (const name of toAdd) {
+    const normalizedName = normalizeKegNameInput(name);
+    batch.set(doc(db, "kegNames", slugifyKegName(normalizedName)), {
+      name: normalizedName,
+      assigned: false,
+      createdAt: now,
+    });
+  }
+
+  await batch.commit();
+  return { added: toAdd.length, skipped };
 }
 
 export async function getProducts(): Promise<Product[]> {
@@ -187,6 +280,70 @@ export async function getKegById(id: string): Promise<Keg | null> {
 
 export async function updateKeg(id: string, payload: Partial<Keg>) {
   return updateDoc(doc(db, "kegs", id), payload);
+}
+
+export interface CreateKegInput {
+  kegId: string;
+  currentLocation?: string;
+  intendedLocation?: string;
+  product?: string;
+  beerName?: string;
+  batch?: string;
+  abv?: number;
+  packagingDate?: string;
+  bestBeforeDate?: string;
+}
+
+export async function createKeg(payload: CreateKegInput) {
+  const kegId = payload.kegId.trim();
+  const id = slugifyKegName(kegId);
+  const kegRef = doc(db, "kegs", id);
+  const kegNameRef = doc(db, "kegNames", slugifyKegName(kegId));
+
+  const now = new Date().toISOString();
+  const currentLocation = payload.currentLocation?.trim() || "Brewery";
+  const intendedLocation = payload.intendedLocation?.trim() || undefined;
+
+  const keg: Omit<Keg, "id"> = {
+    kegId,
+    qrCode: buildQrCodeValue(kegId),
+    currentStatus: payload.product || payload.beerName ? "filled" : "empty",
+    currentLocation,
+    intendedLocation,
+    product: payload.product?.trim() || undefined,
+    beerName: payload.beerName?.trim() || undefined,
+    batch: payload.batch?.trim() || undefined,
+    abv: payload.abv,
+    packagingDate: payload.packagingDate?.trim() || undefined,
+    bestBeforeDate: payload.bestBeforeDate?.trim() || undefined,
+    createdAt: now,
+    lastUpdatedAt: now,
+  };
+
+  await runTransaction(db, async (transaction) => {
+    const [existingKeg, nameSnap] = await Promise.all([transaction.get(kegRef), transaction.get(kegNameRef)]);
+
+    if (existingKeg.exists()) {
+      throw new Error("A keg with that name already exists.");
+    }
+
+    if (!nameSnap.exists()) {
+      throw new Error("This keg name is not available. Add it in settings first.");
+    }
+
+    const nameData = nameSnap.data() as Record<string, unknown>;
+    if (Boolean(nameData.assigned)) {
+      throw new Error("That keg name has already been assigned.");
+    }
+
+    transaction.set(kegRef, keg);
+    transaction.update(kegNameRef, {
+      assigned: true,
+      assignedKegId: id,
+    });
+  });
+
+  return { id, ...keg };
 }
 
 export async function createMovement(payload: Omit<Movement, "id">) {

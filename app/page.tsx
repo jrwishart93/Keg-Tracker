@@ -50,6 +50,13 @@ export default function WelcomePage() {
           >
             Login
           </button>
+          <button
+            type="button"
+            onClick={() => router.push("/how-it-works")}
+            className="min-h-12 w-full rounded-lg border border-white/25 bg-white/0 font-semibold text-slate-100 hover:bg-white/10"
+          >
+            How It Works
+          </button>
         </div>
       </section>
     </main>
