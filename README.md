@@ -17,6 +17,17 @@ Initial implementation of the Keg Tracker app using Next.js App Router, TypeScri
    npm run dev
    ```
 
+## Firebase setup
+
+This app reads Firebase config from environment variables and connects to Cloud Firestore via `lib/firebase.ts`.
+
+1. Copy sample env values:
+   ```bash
+   cp .env.example .env.local
+   ```
+2. Confirm the `NEXT_PUBLIC_FIREBASE_*` values in `.env.local` match your Firebase project settings.
+3. In Firebase Console, enable **Cloud Firestore** (Production or Test mode) for project `keg-tracker-635ce`.
+
 ## Demo auth flow (Firebase Auth + Firestore)
 
 This prototype uses Firebase Authentication (email/password) and Firestore user profile documents (`users/{uid}`).
